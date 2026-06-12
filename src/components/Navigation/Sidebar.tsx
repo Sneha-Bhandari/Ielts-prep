@@ -17,6 +17,7 @@ const SideBar = () => {
   ];
 
   const administrationNav = [
+    { title: "IELTS", path: "/ielts", icons: <GraduationCap className="h-5 w-5" /> },
     { title: "Teachers", path: "/teachers", icons: <GraduationCap className="h-5 w-5" /> },
     { title: "Students", path: "/students", icons: <BookOpen className="h-5 w-5" /> },
     { title: "Counsellors", path: "/counsellors", icons: <UserCheck className="h-5 w-5" /> },
