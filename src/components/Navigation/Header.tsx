@@ -21,7 +21,7 @@ const Header = () => {
           <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
         </button>
 
-        <div className="h-8 w-px bg-slate-200 mx-1" />
+        <div className="h-8 w-px bg-brand-light mx-1" />
 
         <button className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
           <User className="h-4 w-4" />

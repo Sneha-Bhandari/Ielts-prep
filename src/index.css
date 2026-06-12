@@ -1,1 +1,75 @@
 @import "tailwindcss";
+
+@theme {
+    --color-brand: #1F1537CC;
+    --color-brand-light: #B388FF;
+    --color-brand-footer-left: #140D26;
+    --color-brand-primary: #251A44;
+    --font-aeonik: "Aeonik", "sans-serif";
+    --font-noir: "Noir", "sans-serif"
+    --font-sora: "Sora", sans-serif;
+  }
+
+  @font-face {
+    font-family: 'Aeonik';
+    src: url('/fonts/aeonik/AeonikTRIAL-Regular.otf') format('opentype'),
+      url('/fonts/aeonik/AeonikTRIAL-Bold.otf') format('opentype'),
+      url('/fonts/aeonik/AeonikTRIAL-Light.otf') format('opentype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  
+  @font-face {
+    font-family: 'Noir';
+    src: url('/fonts/NOIR_Font/Noir_medium.otf') format('opentype'),
+      url('/fonts/NOIR_Font/Noir_regular.otf') format('opentype');
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: "Sora";
+    src:
+      url("/fonts/sora/Sora-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+  
+  @font-face {
+    font-family: "Sora";
+    src:
+      url("/fonts/sora/Sora-SemiBold.ttf") format("truetype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
+  
+
+  @layer components {
+    .page-title {
+      @apply font-['Noir'] text-3xl font-semibold tracking-tight text-slate-900;
+    }
+  
+    .page-subtitle {
+      @apply mt-1 font-['Aeonik'] text-sm leading-6 text-slate-500;
+    }
+  
+    .page-header {
+      @apply mb-6;
+    }
+    .ui-text {
+        @apply text-sm font-medium text-slate-700;
+        font-family: var(--font-sora);
+      }
+    
+      .button-text {
+        @apply text-sm font-semibold;
+        font-family: var(--font-sora);
+      }
+    
+      .table-heading {
+        @apply text-xs font-semibold uppercase tracking-wider text-slate-500;
+        font-family: var(--font-sora);
+      }
+  }
