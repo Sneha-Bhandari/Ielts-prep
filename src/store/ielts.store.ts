@@ -11,12 +11,12 @@ interface IELTSStore {
   addCourse: (course: IeltsCourse) => void;
 
   updateCourse: (
-    id: number,
+    id: string,
     course: IeltsCourse
   ) => void;
 
   deleteCourse: (
-    id: number
+    id: string
   ) => void;
 
   clearCourses: () => void;
