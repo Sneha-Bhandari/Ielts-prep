@@ -1,3 +1,7 @@
+import { Route, Routes } from 'react-router-dom'
+import './App.css'
+import Login from './pages/Login'
+import  Course from './pages/(super_admin)/courses/course'
 // App.tsx
 import "./App.css";
 import Layout from "./HOC/Layout";
