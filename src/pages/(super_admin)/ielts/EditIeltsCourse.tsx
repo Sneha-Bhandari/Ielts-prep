@@ -16,8 +16,8 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
   const [imagePreview, setImagePreview] = useState("");
 
   useEffect(() => {
-    setImagePreview(course.thumbnail);
-  }, [course]);
+  setImagePreview(course.thumbnail?.url || "");
+}, [course]);
 
   // ✅ FIXED INITIAL VALUES (API STRUCTURE)
   const initialValues = {
@@ -29,8 +29,7 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
         : (course as any).type || "Academic",
     },
     isPublished: Boolean(course.isPublished),
-    thumbnail: course.thumbnail,
-    thumbnailKey: course.thumbnailKey,
+    thumbnail: course.thumbnail?.url || "",
     price:
       typeof course.price === "string"
         ? parseFloat(course.price)
@@ -83,8 +82,7 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
           description: values.description,
           ieltsType: values.ieltsType,
           isPublished: Boolean(values.isPublished),
-          thumbnail: values.thumbnail,
-          thumbnailKey: values.thumbnailKey,
+          // thumbnail: values.thumbnail,
           price: values.price,
         };
 

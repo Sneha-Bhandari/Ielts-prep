@@ -29,17 +29,13 @@ export default function IeltsDashboard() {
   const [editingCourse, setEditingCourse] = useState<IeltsCourse | null>(null);
   const [showDraft, setShowDraft] = useState(false);
 
-  // =========================
-  // FETCH COURSES
-  // =========================
+
   const { data: courses = [], isLoading } = useAppQuery<IeltsCourse[]>({
     url: "/ielts",
     queryKey: ["ielts-courses"],
   });
 
-  // =========================
-  // DELETE COURSE
-  // =========================
+
   const { mutate: deleteCourse } = useAppMutation({
     url: "/ielts",
     type: "delete",
@@ -48,28 +44,14 @@ export default function IeltsDashboard() {
     },
   });
 
-  // =========================
-  // FILTERS
-  // =========================
+
   const publishedCourses = courses.filter((c) => c.isPublished === true);
   const draftCourses = courses.filter((c) => c.isPublished === false);
 
   const displayedCourses = showDraft ? draftCourses : publishedCourses;
 
 
-  const getImageSrc = (thumbnail?: string) => {
-    if (!thumbnail) return "";
-
-    if (
-      thumbnail.startsWith("data:image") ||
-      thumbnail.startsWith("http")
-    ) {
-      return thumbnail;
-    }
-
-    return `${import.meta.env.VITE_API_URL}${thumbnail}`;
-  };
-
+ 
   const getTypeColor = (type: any) => {
     const typeStr = typeof type === "object" ? type?.id : type;
     switch (typeStr?.toLowerCase()) {
@@ -116,8 +98,8 @@ export default function IeltsDashboard() {
               <button
                 onClick={() => setShowDraft(false)}
                 className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${!showDraft
-                    ? "bg-indigo-600 text-white shadow-md"
-                    : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-600 hover:bg-slate-100"
                   }`}
               >
                 Live Courses
@@ -125,8 +107,8 @@ export default function IeltsDashboard() {
               <button
                 onClick={() => setShowDraft(true)}
                 className={`px-6 py-2.5 rounded-lg text-sm font-medium transition-all ${showDraft
-                    ? "bg-indigo-600 text-white shadow-md"
-                    : "text-slate-600 hover:bg-slate-100"
+                  ? "bg-indigo-600 text-white shadow-md"
+                  : "text-slate-600 hover:bg-slate-100"
                   }`}
               >
                 Draft Courses
@@ -225,8 +207,11 @@ export default function IeltsDashboard() {
                       ? parseFloat(course.price)
                       : course.price ?? 0;
 
-                  const imageSrc = getImageSrc(course.thumbnail);
+                  // const imageSrc = getImageSrc(course.thumbnail);
+                  const imageSrc = course.thumbnail?.url || "";
 
+                  console.log("Course:", course);
+                  console.log("Image URL:", course.thumbnail?.url);
                   return (
                     <div
                       key={`${course.id}-${index}`}
@@ -250,14 +235,14 @@ export default function IeltsDashboard() {
                           </div>
                         )}
                         <div className="absolute top-3 right-3">
-                          <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getTypeColor(course.ieltsType)}`}>
+                          {/* <span className={`px-2.5 py-1 rounded-lg text-xs font-medium border ${getTypeColor(course.ieltsType)}`}>
                             {typeLabel}
-                          </span>
+                          </span> */}
                         </div>
                         <div className="absolute bottom-3 left-3">
                           <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${course.isPublished
-                              ? "bg-emerald-500 text-white"
-                              : "bg-amber-500 text-white"
+                            ? "bg-emerald-500 text-white"
+                            : "bg-amber-500 text-white"
                             }`}>
                             {course.isPublished ? "Published" : "Draft"}
                           </span>
@@ -408,3 +393,5 @@ export default function IeltsDashboard() {
     </>
   );
 }
+
+

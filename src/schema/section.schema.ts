@@ -1,12 +1,3 @@
-// import * as yup from "yup";
-
-// export const sectionSchema = yup.object({
-//   name: yup
-//     .string()
-//     .required("Section name is required"),
-//   description: yup.string().required("section description is required")
-// });
-
 import * as yup from "yup";
 
 export const sectionSchema = yup.object().shape({

@@ -25,7 +25,6 @@ function App() {
           <Route path="/user/new" element={<NewUserModel />} />
 
           <Route path="/ielts" element={<IeltsDashboard />} />
-          {/* <Route path="/ielts/course/:id" element={<CourseDetails />} /> */}
           <Route
             path="/ielts/course/:courseId/sections"
             element={<AddSectionPage />}
