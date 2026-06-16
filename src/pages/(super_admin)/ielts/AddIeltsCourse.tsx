@@ -11,8 +11,8 @@ export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [imagePreview, setImagePreview] = useState("");
     const [dragActive, setDragActive] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadError, setUploadError] = useState("");
+    const [isUploading, setIsUploading] = useState(false);  //d
+    const [uploadError, setUploadError] = useState("");     //d
     
     const addCourse = useIELTSStore((state) => state.addCourse);
 
@@ -53,7 +53,7 @@ export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
         };
     }, [imagePreview]);
 
-    const uploadThumbnail = async (file: File): Promise<string> => {
+    const uploadThumbnail = async (file: File): Promise<string> => {  //d
         const formData = new FormData();
         formData.append("images", file);
         formData.append("file", file);
