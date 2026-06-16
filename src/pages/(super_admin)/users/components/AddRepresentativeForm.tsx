@@ -1,7 +1,9 @@
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from "yup";
-import { Upload, X} from 'lucide-react';
-import { useState, } from 'react';
+import { Upload, X, FileText, Loader2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { uploadFile } from '../../../../lib/file-upload';
+import toast from 'react-hot-toast';
 
 const addRepresentativeSchema = Yup.object({
   name: Yup.string().required("Name is required").min(2, "Name must be at least 2 characters"),
@@ -17,19 +19,56 @@ interface AddRepresentativeFormProps {
 }
 
 export const AddRepresentativeForm = ({ onSubmit, isLoading, onClose }: AddRepresentativeFormProps) => {
-  const [proofDocumentPreview, setProofDocumentPreview] = useState<string>('');
-  const [proofDocumentFile, setProofDocumentFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{ id: string; url: string } | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, setFieldValue: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Show preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    setPreview(previewUrl);
+    setFieldValue('proofDocument', file);
+
+    try {
+      setIsUploading(true);
+      const uploaded = await uploadFile(file);
+      setPreview(uploaded.url);
+      setUploadedFile(uploaded); // Store the full object { id, url }
+      toast.success('File uploaded successfully!');
+    } catch (error) {
+      console.error('Upload failed:', error);
+      toast.error('Failed to upload file');
+      setPreview(null);
+      setUploadedFile(null);
+      setFieldValue('proofDocument', null);
+    } finally {
+      setIsUploading(false);
+      if (inputRef.current) inputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveFile = (setFieldValue: any) => {
+    setPreview(null);
+    setUploadedFile(null);
+    setFieldValue('proofDocument', null);
+    if (inputRef.current) inputRef.current.value = '';
+  };
 
   const handleSubmit = (values: any, { resetForm, setSubmitting }: any) => {
-    const submitData = { ...values };
-    if (proofDocumentFile) {
-      submitData.proofDocumentFile = proofDocumentFile;
-    }
-    onSubmit(submitData);
+    // Pass the uploaded file object to parent (which contains id and url)
+    onSubmit({ ...values, proofDocumentFile: uploadedFile });
     resetForm();
-    setProofDocumentPreview('');
-    setProofDocumentFile(null);
+    setPreview(null);
+    setUploadedFile(null);
     setSubmitting(false);
+  };
+
+  const isImage = (url: string) => {
+    return url?.match(/\.(jpg|jpeg|png|gif|webp)$/i) || url?.startsWith('blob:');
   };
 
   return (
@@ -50,58 +89,111 @@ export const AddRepresentativeForm = ({ onSubmit, isLoading, onClose }: AddRepre
           validationSchema={addRepresentativeSchema}
           onSubmit={handleSubmit}
         >
-          {({ setFieldValue, isSubmitting }) => (
+          {({ setFieldValue, isSubmitting, errors, touched }) => (
             <Form className="p-6 space-y-6">
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Full Name *</label>
-                  <Field name="name" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 border-slate-300" placeholder="Enter full name" disabled={isLoading} />
+                  <Field 
+                    name="name" 
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                      touched.name && errors.name ? 'border-red-500' : 'border-slate-300'
+                    }`}
+                    placeholder="Enter full name" 
+                    disabled={isLoading} 
+                  />
                   <ErrorMessage name="name" component="div" className="mt-1 text-xs text-red-500" />
                 </div>
 
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Email Address *</label>
-                  <Field name="email" type="email" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 border-slate-300" placeholder="representative@example.com" disabled={isLoading} />
+                  <Field 
+                    name="email" 
+                    type="email" 
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                      touched.email && errors.email ? 'border-red-500' : 'border-slate-300'
+                    }`}
+                    placeholder="representative@example.com" 
+                    disabled={isLoading} 
+                  />
                   <ErrorMessage name="email" component="div" className="mt-1 text-xs text-red-500" />
                 </div>
 
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Contact Number *</label>
-                  <Field name="contact" type="tel" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 border-slate-300" placeholder="9876543210" disabled={isLoading} />
+                  <Field 
+                    name="contact" 
+                    type="tel" 
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                      touched.contact && errors.contact ? 'border-red-500' : 'border-slate-300'
+                    }`}
+                    placeholder="9876543210" 
+                    disabled={isLoading} 
+                  />
                   <ErrorMessage name="contact" component="div" className="mt-1 text-xs text-red-500" />
                 </div>
 
                 <div className="col-span-2 sm:col-span-1">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Designation *</label>
-                  <Field name="designation" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 border-slate-300" placeholder="e.g., Manager" disabled={isLoading} />
+                  <Field 
+                    name="designation" 
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 ${
+                      touched.designation && errors.designation ? 'border-red-500' : 'border-slate-300'
+                    }`}
+                    placeholder="e.g., Manager" 
+                    disabled={isLoading} 
+                  />
                   <ErrorMessage name="designation" component="div" className="mt-1 text-xs text-red-500" />
                 </div>
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-slate-700 mb-1">Proof Document</label>
-                  <div className="border-2 border-dashed rounded-lg p-4 text-center">
-                    {proofDocumentPreview ? (
+                  <div className="border-2 border-dashed rounded-lg p-4 text-center hover:border-indigo-400 transition-colors">
+                    {preview ? (
                       <div className="relative inline-block">
-                        <img src={proofDocumentPreview} alt="Preview" className="h-32 w-auto mx-auto rounded-lg object-cover" />
-                        <button type="button" onClick={() => { setProofDocumentFile(null); setProofDocumentPreview(''); setFieldValue('proofDocument', ''); }} className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full">
+                        {isImage(preview) ? (
+                          <img src={preview} alt="Preview" className="h-32 w-auto mx-auto rounded-lg object-cover" />
+                        ) : (
+                          <div className="h-32 w-32 mx-auto flex flex-col items-center justify-center bg-slate-100 rounded-lg">
+                            <FileText className="h-12 w-12 text-slate-500" />
+                            <span className="text-xs text-slate-500 mt-1">Document</span>
+                          </div>
+                        )}
+                        {isUploading && (
+                          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 text-white animate-spin" />
+                          </div>
+                        )}
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveFile(setFieldValue)} 
+                          className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                          disabled={isUploading}
+                        >
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                     ) : (
                       <>
-                        <Upload className="mx-auto h-10 w-10 text-slate-400" />
-                        <label className="cursor-pointer text-indigo-600 hover:text-indigo-700">
-                          <span>Click to upload</span>
-                          <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              setProofDocumentFile(file);
-                              setProofDocumentPreview(URL.createObjectURL(file));
-                              setFieldValue('proofDocument', file);
-                            }
-                          }} disabled={isLoading} />
-                        </label>
-                        <p className="text-xs text-slate-500">PNG, JPG, PDF up to 5MB</p>
+                        {isUploading ? (
+                          <Loader2 className="h-8 w-8 text-indigo-500 animate-spin mx-auto" />
+                        ) : (
+                          <>
+                            <Upload className="mx-auto h-10 w-10 text-slate-400" />
+                            <label className="cursor-pointer text-indigo-600 hover:text-indigo-700">
+                              <span>Click to upload</span>
+                              <input 
+                                ref={inputRef}
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*,.pdf" 
+                                onChange={(e) => handleFileSelect(e, setFieldValue)}
+                                disabled={isLoading || isUploading} 
+                              />
+                            </label>
+                            <p className="text-xs text-slate-500 mt-1">PNG, JPG, PDF up to 5MB</p>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
@@ -109,10 +201,20 @@ export const AddRepresentativeForm = ({ onSubmit, isLoading, onClose }: AddRepre
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="submit" disabled={isLoading || isSubmitting} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+                <button 
+                  type="submit" 
+                  disabled={isLoading || isSubmitting || isUploading} 
+                  className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
                   {isLoading || isSubmitting ? 'Adding...' : 'Add Representative'}
                 </button>
-                <button type="button" onClick={onClose} className="flex-1 border border-slate-300 py-2 rounded-lg hover:bg-slate-50">Cancel</button>
+                <button 
+                  type="button" 
+                  onClick={onClose} 
+                  className="flex-1 border border-slate-300 py-2 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             </Form>
           )}

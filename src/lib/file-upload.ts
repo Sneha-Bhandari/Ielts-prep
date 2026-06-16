@@ -121,33 +121,49 @@ export const deleteFile = async (fileId: string): Promise<void> => {
 
 /**
  * Get file URL for display
- * @param fileData - Can be string (URL/ID) or UploadedFile object
+ * @param fileData - Can be string (URL/ID) or object with url property
  * @returns The file URL or null
  */
-export const getFileUrl = (fileData: string | UploadedFile | null | undefined): string | null => {
+export const getFileUrl = (fileData: string | { url: string } | null | undefined): string | null => {
   if (!fileData) return null;
   
+  // If it's a string
   if (typeof fileData === 'string') {
     // If it's already a full URL
-    if (fileData.startsWith('http')) return fileData;
+    if (fileData.startsWith('http://') || fileData.startsWith('https://')) {
+      return fileData;
+    }
+    // If it's just an ID or path, construct full URL
+    if (fileData.startsWith('/uploads/')) {
+      return `${baseURL}${fileData}`;
+    }
     // If it's just an ID, construct URL (adjust based on your backend)
     return `${baseURL}/fileupload/image/${fileData}`;
   }
   
-  return fileData.url || null;
+  // If it's an object with url property
+  if (fileData.url) {
+    return getFileUrl(fileData.url);
+  }
+  
+  return null;
 };
 
 /**
  * Get file ID from file data
- * @param fileData - Can be string (URL/ID) or UploadedFile object
+ * @param fileData - Can be string (URL/ID) or object with url property
  * @returns The file ID or null
  */
-export const getFileId = (fileData: string | UploadedFile | null | undefined): string | null => {
+export const getFileId = (fileData: string | { id: string } | null | undefined): string | null => {
   if (!fileData) return null;
   
   if (typeof fileData === 'string') {
     return fileData;
   }
   
-  return fileData.id || null;
+  if (fileData.id) {
+    return fileData.id;
+  }
+  
+  return null;
 };

@@ -139,7 +139,7 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
       setLogoPreview('');
       setFieldValue('companyLogo', '');
       if (logoInputRef.current) logoInputRef.current.value = '';
-      toast('Logo removed');
+      toast.remove('Logo removed');
     } else {
       if (registrationDocumentPreview && registrationDocumentPreview.startsWith('blob:')) {
         URL.revokeObjectURL(registrationDocumentPreview);
@@ -147,7 +147,7 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
       setRegistrationDocumentPreview('');
       setFieldValue('registrationDocument', '');
       if (documentInputRef.current) documentInputRef.current.value = '';
-      toast('Document removed');
+      toast.remove('Document removed');
     }
   };
 

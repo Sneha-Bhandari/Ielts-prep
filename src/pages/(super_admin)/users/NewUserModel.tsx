@@ -31,8 +31,6 @@ export default function NewUserModel() {
     onSuccess: (data) => {
       addAdmin(data);
       toast.success('Company created successfully!', {
-        duration: 3000,
-        position: 'top-right',
       });
       setTimeout(() => {
         navigate('/user');
@@ -41,14 +39,11 @@ export default function NewUserModel() {
     onError: (error: any) => {
       console.error('Error creating company:', error);
       toast.error(error?.response?.data?.message || 'Failed to create company. Please try again.', {
-        duration: 4000,
-        position: 'top-right',
       });
     },
   });
 
   const handleCreateAdmin = async (values: any) => {
-    // Find the selected plan to get its ID
     const selectedPlan = plans.find(plan => plan.name === values.plan);
     
     const payload = {
