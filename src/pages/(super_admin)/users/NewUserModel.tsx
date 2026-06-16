@@ -1,75 +1,99 @@
-import { useState } from 'react';
-import { UserPlus, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AdminForm } from './components/AdminForm';
-import { useCreateAdmin, useGetCompanies } from '../../../hook/useCreateAdmin';
+import { useAppMutation, useAppQuery } from '../../../lib/react-query';
+import { useAdminStore } from '../../../store/admin.store';
+import type { Plan } from '../../../interfaces/admin.interface';
+import toast, { Toaster } from 'react-hot-toast';
+
+const countries = [
+  { id: '1', name: 'USA', code: 'US' },
+  { id: '2', name: 'UK', code: 'GB' },
+  { id: '3', name: 'Canada', code: 'CA' },
+  { id: '4', name: 'Australia', code: 'AU' },
+  { id: '5', name: 'India', code: 'IN' },
+  { id: '6', name: 'Germany', code: 'DE' },
+  { id: '7', name: 'Nepal', code: 'NP' },
+];
 
 export default function NewUserModel() {
   const navigate = useNavigate();
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
+  const { addAdmin } = useAdminStore();
 
-  const createAdminMutation = useCreateAdmin();
-  const { data: companies = []} = useGetCompanies();
+  const { data: plans = [], isLoading: plansLoading } = useAppQuery<Plan[]>({
+    url: '/plans',
+    queryKey: ['plans'],
+  });
+
+  const { mutate: createAdmin, isPending: isLoading } = useAppMutation({
+    url: '/admins',
+    type: 'post',
+    onSuccess: (data) => {
+      addAdmin(data);
+      toast.success('Company created successfully!', {
+        duration: 3000,
+        position: 'top-right',
+      });
+      setTimeout(() => {
+        navigate('/user');
+      }, 2000);
+    },
+    onError: (error: any) => {
+      console.error('Error creating company:', error);
+      toast.error(error?.response?.data?.message || 'Failed to create company. Please try again.', {
+        duration: 4000,
+        position: 'top-right',
+      });
+    },
+  });
 
   const handleCreateAdmin = async (values: any) => {
-    try {
-      await createAdminMutation.mutateAsync(values);
-      setSuccessMessage('Admin created successfully! An email has been sent to the admin.');
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        // Reset form or navigate
-        // navigate('/user');
-      }, 5000);
-    } catch (error: any) {
-      console.error('Error creating admin:', error);
-      alert(error.response?.data?.message || 'Failed to create admin');
-    }
+    // Find the selected plan to get its ID
+    const selectedPlan = plans.find(plan => plan.name === values.plan);
+    
+    const payload = {
+      country: values.country,
+      companyName: values.companyName,
+      companyAddress: values.companyAddress,
+      email: values.email,
+      companyLogo: values.companyLogo,
+      website: values.website || null,
+      panNo: values.panNo,
+      registrationDocument: values.registrationDocument,
+      planid: selectedPlan?.id || values.plan, 
+      paymentStatus: values.paymentStatus || 'pending',
+      isActive: values.isActive ?? true,
+    };
+    
+    console.log('Sending payload:', payload);
+    createAdmin({ data: payload });
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-4xl mx-auto">
+      <Toaster />
       <button
         onClick={() => navigate('/user')}
         className="flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors group"
       >
         <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 duration-500 transition-transform" />
-        <span className="text-md font-medium cursor-pointer">Back to User Management</span>
+        <span className="text-md font-medium cursor-pointer">Back to Company Management</span>
       </button>
 
-      {showSuccess && (
-        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4 animate-in slide-in-from-top-2">
-          <p className="text-sm text-green-800">{successMessage}</p>
+      <div className="bg-white rounded-xl shadow-md border border-slate-200">
+        <div className="border-b border-slate-200 p-6">
+          <h2 className="text-xl font-semibold text-slate-900">Register New Company</h2>
+          <p className="text-sm text-slate-500 mt-1">Fill in the details below to register a new company</p>
         </div>
-      )}
-
-      <div className="bg-white rounded-xl  shadow-md">
-        <div className="border-b border-slate-200 p-4">
-          <div className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-indigo-600" />
-            <h2 className="page-title">Create New Admin</h2>
-          </div>
-          <p className="page-subtitle">
-            Fill in the details below to create a new admin user
-          </p>
-        </div>
-
         <div className="p-6">
           <AdminForm
             onSubmit={handleCreateAdmin}
-            isLoading={createAdminMutation.isPending}
-            companies={companies}
+            isLoading={isLoading}
+            countries={countries}
+            plans={plans}
+            plansLoading={plansLoading}
           />
         </div>
-      </div>
-
-      <div className="mt-6 bg-blue-50 rounded-lg p-4 border border-blue-100">
-        <h3 className="font-medium text-brand-light mb-1">📝 Admin Creation</h3>
-        <p className="text-xs text-brand">
-          Create admin users who can manage their organization's dashboard, students, teachers, and counsellors.
-          The admin will receive login credentials via email.
-        </p>
       </div>
     </div>
   );
