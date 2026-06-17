@@ -28,42 +28,37 @@ export const AddRepresentativeForm = ({ onSubmit, isLoading, onClose }: AddRepre
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Show preview immediately
     const previewUrl = URL.createObjectURL(file);
     setPreview(previewUrl);
-    setFieldValue('proofDocument', file);
 
     try {
       setIsUploading(true);
       const uploaded = await uploadFile(file);
       setPreview(uploaded.url);
-      setUploadedFile(uploaded); // Store the full object { id, url }
+      setUploadedFile(uploaded); 
       toast.success('File uploaded successfully!');
     } catch (error) {
       console.error('Upload failed:', error);
       toast.error('Failed to upload file');
       setPreview(null);
       setUploadedFile(null);
-      setFieldValue('proofDocument', null);
     } finally {
       setIsUploading(false);
       if (inputRef.current) inputRef.current.value = '';
     }
   };
 
-  const handleRemoveFile = (setFieldValue: any) => {
+  const handleRemoveFile = () => {
     setPreview(null);
     setUploadedFile(null);
-    setFieldValue('proofDocument', null);
     if (inputRef.current) inputRef.current.value = '';
   };
 
-  const handleSubmit = (values: any, { resetForm, setSubmitting }: any) => {
-    // Pass the uploaded file object to parent (which contains id and url)
-    onSubmit({ ...values, proofDocumentFile: uploadedFile });
-    resetForm();
-    setPreview(null);
-    setUploadedFile(null);
+  const handleSubmit = (values: any, { setSubmitting }: any) => {
+    onSubmit({ 
+      ...values, 
+      proofDocumentFile: uploadedFile 
+    });
     setSubmitting(false);
   };
 
@@ -166,7 +161,7 @@ export const AddRepresentativeForm = ({ onSubmit, isLoading, onClose }: AddRepre
                         )}
                         <button 
                           type="button" 
-                          onClick={() => handleRemoveFile(setFieldValue)} 
+                          onClick={handleRemoveFile} 
                           className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                           disabled={isUploading}
                         >

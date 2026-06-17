@@ -1,15 +1,16 @@
+// src/App.tsx
 import "./App.css";
 import Layout from "./HOC/Layout";
 import SuperDashboard from "./pages/(super_admin)/dashboard/superDashboard";
 import NewUserModel from "./pages/(super_admin)/users/NewUserModel";
 import UserManagement from "./pages/(super_admin)/users/UserManagement";
 import UserDetail from "./pages/(super_admin)/users/UserDetail";
-// import PlanManagement from "./pages/(super_admin)/users/PlanManagement";
-// import PaymentManagement from "./pages/(super_admin)/users/PaymentManagement";
-// import StatusManagement from "./pages/(super_admin)/users/StatusManagement";
 import Login from "./pages/Login";
 import { Route, Routes } from "react-router-dom";
-import StudentDashboard from "./pages/(super_admin)/students/StudentDashboard";
+import { AddStudent } from "./pages/(super_admin)/students/components/AddStudent";
+import { StudentManagement } from "./pages/(super_admin)/students/StudentManagement";
+import { EditStudent } from "./pages/(super_admin)/students/components/EditStudent";
+import { StudentDetail } from "./pages/(super_admin)/students/components/StudentDetail";
 
 function App() {
   return (
@@ -25,13 +26,11 @@ function App() {
           <Route path="/user/new" element={<NewUserModel />} />
           <Route path="/user/:id" element={<UserDetail />} />
           
-          {/* Company Management Routes */}
-          {/* <Route path="/user/:id/plan" element={<PlanManagement />} />
-          <Route path="/user/:id/payment" element={<PaymentManagement />} />
-          <Route path="/user/:id/status" element={<StatusManagement />} /> */}
-
-<Route path="/students" element={<StudentDashboard />} />
-
+          {/* Student Routes */}
+          <Route path="/students" element={<StudentManagement />} />
+          <Route path="/students/add" element={<AddStudent />} />
+          <Route path="/students/:id" element={<StudentDetail/>} />
+          <Route path="/students/edit/:id" element={<EditStudent />} />
         </Route>
       </Routes>
     </>

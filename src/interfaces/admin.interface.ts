@@ -28,7 +28,7 @@ export interface CompanyRepresentative {
     contact: string;
     designation: string;
     email: string;
-    proofDocumentId: string
+    proofDocumentId: string;
   }
 
 export interface Plan {

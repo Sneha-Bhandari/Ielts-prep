@@ -1,12 +1,13 @@
 // UserManagement.tsx
-import { useState} from 'react';
-import { UserPlus, Eye, Trash2, Building } from 'lucide-react';
+import { useState } from 'react';
+import { UserPlus, Eye, Trash2, Building, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UserCards from './components/UserCards';
 import { useAdminStore } from '../../../store/admin.store';
 import { useAppQuery, useAppMutation } from '../../../lib/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Admin } from '../../../interfaces/admin.interface';
+import Pagination from '../../../components/UI/Pagination';
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -16,13 +17,14 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // FETCH ADMINS
   const { data: fetchedAdmins = [], isLoading } = useAppQuery<Admin[]>({
     url: "/admins",
     queryKey: ["admins"],
   });
-  
 
   // DELETE ADMIN
   const { mutate: deleteAdminApi } = useAppMutation({
@@ -35,6 +37,7 @@ export default function UserManagement() {
 
   const safeAdmins = fetchedAdmins.length > 0 ? fetchedAdmins : admins;
 
+  // Filter users based on search and status
   const filteredUsers = safeAdmins.filter(admin => {
     const companyName = admin?.companyName || '';
     const email = admin?.email || '';
@@ -51,6 +54,23 @@ export default function UserManagement() {
     
     return matchesSearch && matchesStatus;
   });
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentItems = filteredUsers.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  const handleFilterChange = (value: string) => {
+    setFilterStatus(value);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
 
   const getStatusBadgeColor = (isActive: boolean) => {
     return isActive 
@@ -73,17 +93,14 @@ export default function UserManagement() {
     setShowDeleteModal(null);
   };
 
-  // Fixed: Get logo URL from companyLogoId object
+  // Get logo URL from companyLogoId object
   const getLogoUrl = (admin: any) => {
-    // Check if companyLogoId exists and has url property
     if (admin?.companyLogoId?.url) {
       return admin.companyLogoId.url;
     }
-    // Fallback if companyLogoId has a different structure
     if (admin?.companyLogoId && typeof admin.companyLogoId === 'object') {
       return admin.companyLogoId.url || null;
     }
-    // If it's a string
     if (typeof admin?.companyLogoId === 'string') {
       if (admin.companyLogoId.startsWith('http')) {
         return admin.companyLogoId;
@@ -95,8 +112,9 @@ export default function UserManagement() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-slate-500">Loading...</div>
+      <div className="flex items-center justify-center h-80 gap-3">
+        <Loader2 className="w-6 h-6 text-slate-500 animate-spin" />
+        <h1 className="text-slate-500">Loading...</h1>
       </div>
     );
   }
@@ -123,7 +141,7 @@ export default function UserManagement() {
                 type="text"
                 placeholder="Search by company name, email or country..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               <svg className="absolute left-3 top-2.5 h-5 w-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +151,7 @@ export default function UserManagement() {
             <div className="flex gap-2">
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) => handleFilterChange(e.target.value)}
                 className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="all">All Status</option>
@@ -158,12 +176,13 @@ export default function UserManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredUsers.map((admin, index) => {
+              {currentItems.map((admin, index) => {
                 const logoUrl = getLogoUrl(admin);
+                const globalIndex = startIndex + index + 1;
                 
                 return (
                   <tr key={admin.id} className="hover:bg-slate-50 transition-colors cursor-pointer group">
-                    <td className="px-6 py-4 text-sm text-slate-600">{index + 1}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{globalIndex}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         {logoUrl ? (
@@ -195,12 +214,12 @@ export default function UserManagement() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 capitalize">
-                      {admin?.plan?.name}
+                        {admin?.plan?.name || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPaymentStatusColor(admin.paymentStatus)} capitalize`}>
-                        {admin.paymentStatus}
+                        {admin.paymentStatus || 'pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -239,6 +258,19 @@ export default function UserManagement() {
             <p className="text-slate-500">No companies found</p>
           </div>
         )}
+
+        {/* Pagination */}
+        {filteredUsers.length > 0 && (
+          <div className="px-4 py-3 border-t border-slate-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredUsers.length}
+              itemsPerPage={itemsPerPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}
@@ -274,4 +306,3 @@ export default function UserManagement() {
     </div>
   );
 }
-

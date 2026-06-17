@@ -124,6 +124,7 @@ export const deleteFile = async (fileId: string): Promise<void> => {
  * @param fileData - Can be string (URL/ID) or object with url property
  * @returns The file URL or null
  */
+// get ko lagi
 export const getFileUrl = (fileData: string | { url: string } | null | undefined): string | null => {
   if (!fileData) return null;
   
