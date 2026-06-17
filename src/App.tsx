@@ -2,14 +2,15 @@
 import "./App.css";
 import Layout from "./HOC/Layout";
 import SuperDashboard from "./pages/(super_admin)/dashboard/superDashboard";
-import AddLessonPage from "./pages/(super_admin)/ielts/AddLessonPage";
-import AddSectionPage from "./pages/(super_admin)/ielts/AddSectionPage";
-// import CourseDetails from "./pages/(super_admin)/ielts/courseDetails";
 import IeltsDashboard from "./pages/(super_admin)/ielts/ieltsDashboard";
+import LessonDashboard from "./pages/(super_admin)/ielts/lesson/LesssonDashboard";
+import CreateSectionPage from "./pages/(super_admin)/ielts/section/[id]/CreateSectionPage";
+import SectionDashboard from "./pages/(super_admin)/ielts/section/sectionDashboard";
 import NewUserModel from "./pages/(super_admin)/users/NewUserModel";
 import UserManagement from "./pages/(super_admin)/users/UserManagement";
 import Login from "./pages/Login";
 import { Route, Routes } from "react-router-dom";
+
 
 function App() {
   return (
@@ -17,25 +18,30 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route element={<Layout />}>
-          {/* Home */}
+
           <Route path="/" element={<SuperDashboard />} />
 
-          {/* User Routes */}
           <Route path="/user" element={<UserManagement />} />
           <Route path="/user/new" element={<NewUserModel />} />
 
+
           <Route path="/ielts" element={<IeltsDashboard />} />
+
+          <Route
+            path="/ielts/course/:courseId"
+            element={<SectionDashboard />}
+          />
+
           <Route
             path="/ielts/course/:courseId/sections"
-            element={<AddSectionPage />}
+            element={<CreateSectionPage />}
           />
 
           <Route
             path="/ielts/course/:courseId/section/:sectionId"
-            element={<AddLessonPage />}
+            element={<LessonDashboard />}
           />
 
-          {/* Company Routes */}
         </Route>
       </Routes>
     </>

@@ -14,10 +14,7 @@ export const sectionSchema = yup.object().shape({
     .min(0, "Order number cannot be negative")
     .required("Order number is required"),
   
-  ielts: yup.string()
-    .nullable()
-    .notRequired()
-    .transform((value) => value === "" ? null : value),
+
 });
 
 export type SectionFormData = yup.InferType<typeof sectionSchema>;
