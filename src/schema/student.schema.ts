@@ -30,10 +30,7 @@ export const studentSchema = yup.object().shape({
     .min(0, "Target band must be at least 0")
     .max(9, "Target band must be at most 9"),
   
-  targetExam: yup
-    .string()
-    .required("Target exam is required")
-    .oneOf(["IELTS Academic", "IELTS General", "PTE", "TOEFL"], "Invalid exam type"),
+    targetExam: yup.string().nullable().optional(),
   
   currentLevel: yup
     .string()
@@ -48,9 +45,9 @@ export const studentSchema = yup.object().shape({
     .boolean()
     .required("External status is required"),
   
-  companyId: yup
-    .string()
-    .required("Company ID is required"),
+//   companyId: yup
+//     .string()
+//     .required("Company ID is required"),
 });
 
 export type StudentFormData = yup.InferType<typeof studentSchema>;

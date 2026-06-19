@@ -1,8 +1,9 @@
 import { useMutation, useQuery, type UseQueryResult } from "@tanstack/react-query";
-import axios from "axios";
+// import axios from "axios";
+import api from '../api/api'
 
 // ✅ Base URL from env (Vite)
-const baseURL = import.meta.env.VITE_API_URL;
+// const baseURL = import.meta.env.VITE_API_URL;
 
 // -------------------------
 // 🔥 MUTATION HOOK
@@ -24,8 +25,8 @@ return useMutation({
     mutationFn: async ({ data, id }: { data?: any; id?: string }) => {
      const formattedUrl = id ? `${url}/${id}` : url;
 
-     const response = await axios.request({
-        baseURL,
+     const response = await api.request({
+        // baseURL,
         url: formattedUrl,
         method: type,
         data,
@@ -66,11 +67,11 @@ return useQuery<T>({
     queryKey,
     enabled,
     queryFn: async () => {
-     const response = await axios.get<T>(url, {
-        baseURL,
+     const response = await api.get<T>(url, {
+        // baseURL,
         params,
      });
-
+     console.log("RAW RESPONSE:", response.data);
      return response.data;
     },
     ...options,

@@ -8,6 +8,9 @@ import { useAppQuery, useAppMutation } from '../../../lib/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Admin } from '../../../interfaces/admin.interface';
 import Pagination from '../../../components/UI/Pagination';
+import toast from 'react-hot-toast';
+import { Toaster } from "react-hot-toast";
+
 
 export default function UserManagement() {
   const navigate = useNavigate();
@@ -91,6 +94,8 @@ export default function UserManagement() {
     deleteAdminApi({ id });
     deleteAdmin(id);
     setShowDeleteModal(null);
+    toast.success("User removed successfully!");
+    
   };
 
   // Get logo URL from companyLogoId object
@@ -122,11 +127,11 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <UserCards users={safeAdmins} />
-      
+      <Toaster position='top-right'/>
       <div className="flex justify-end items-center">
         <button
           onClick={() => navigate('/user/new')}
-          className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700/90 transition-colors shadow-sm cursor-pointer"
+          className="flex items-center gap-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand/90 transition-colors shadow-sm cursor-pointer duration-500"
         >
           <UserPlus className="h-4 w-4" />
           <span>Add New Company</span>

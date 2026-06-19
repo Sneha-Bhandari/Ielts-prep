@@ -1,34 +1,74 @@
-// src/components/students/EditStudent.tsx
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { StudentForm } from './StudentForm';
-import { useStudentStore } from '../../../../store/student.store';
-import { useAdminStore } from '../../../../store/admin.store';
-import { useAppQuery, useAppMutation } from '../../../../lib/react-query';
-import { useQueryClient } from '@tanstack/react-query';
-import { getFileUrl } from '../../../../lib/file-upload';
-import type { Student } from '../../../../interfaces/student.interface';
-import type { StudentFormData } from '../../../../schema/student.schema';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, Loader2 } from "lucide-react";
+import { StudentForm } from "./StudentForm";
+import { useStudentStore } from "../../../../store/student.store";
+import { useAppQuery, useAppMutation } from "../../../../lib/react-query";
+import { useQueryClient } from "@tanstack/react-query";
+import { getFileUrl } from "../../../../lib/file-upload";
+import type { Student } from "../../../../interfaces/student.interface";
+import type { StudentFormData } from "../../../../schema/student.schema";
+import toast from "react-hot-toast";
+
+interface IeltsType {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface IeltsResponse {
+  id: string;
+  title: string;
+  description: string;
+  ieltsType: IeltsType;
+  thumbnail: any;
+  isPublished: boolean;
+  price: string;
+  sections: any[];
+}
+
+interface IeltsOption {
+  id: string;
+  title: string;
+  typeName: string;
+  displayName: string;
+}
 
 export const EditStudent: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const { getStudentById, updateStudent } = useStudentStore();
-  const { getCompanyId, admins, currentAdmin } = useAdminStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [initialValues, setInitialValues] = useState<StudentFormData | undefined>();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string>('');
+  const [ieltsOptions, setIeltsOptions] = useState<IeltsOption[]>([]);
 
-  const { 
-    data: studentData, 
+  const { data: fetchedIelts, isLoading: isLoadingIelts } = useAppQuery<IeltsResponse[]>({
+    url: "/ielts/published",
+    queryKey: ["ielts"],
+  });
+
+  useEffect(() => {
+    const ieltsData = fetchedIelts || [];
+    if (ieltsData.length > 0) {
+      const options = ieltsData.map((ielts) => ({
+        id: ielts.id, 
+        title: ielts.title,
+        typeName: ielts.ieltsType?.name || 'Unknown Type',
+        displayName: `${ielts.title} (${ielts.ieltsType?.name || 'Unknown Type'})`
+      }));
+      
+      setIeltsOptions(options);
+    }
+  }, [fetchedIelts]);
+
+  const {
+    data: studentData,
     isLoading: isFetching,
     error: fetchError,
-    refetch 
+    refetch,
   } = useAppQuery<Student>({
     url: id ? `/students/${id}` : "",
     queryKey: ["student", id || ""],
@@ -41,87 +81,93 @@ export const EditStudent: React.FC = () => {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["students"] });
       queryClient.invalidateQueries({ queryKey: ["student", id] });
-      
+
       if (data) {
         updateStudent(id!, data);
       }
-      
-      toast.success('Student updated successfully!');
-      navigate('/students');
+
+      toast.success("Student updated successfully!");
+      navigate("/students");
     },
     onError: (error: any) => {
-      console.error('Update error:', error);
-      toast.error(error?.response?.data?.message || 'Failed to update student');
+      console.error("Update error:", error);
+      toast.error(error?.response?.data?.message || "Failed to update student");
       setIsSaving(false);
     },
   });
 
+  const getExamId = (student: Student): string => {
+    if (!student.targetExam) return '';
+    
+    if (typeof student.targetExam === 'object' && student.targetExam !== null) {
+      return student.targetExam.id || '';
+    }
+    if (typeof student.targetExam === 'string') {
+      return student.targetExam;
+    }
+    return '';
+  };
+
   useEffect(() => {
     if (studentData) {
-      console.log('Student data loaded:', studentData);
-      
-      const companyId = studentData.companyId || getCompanyId() || admins[0]?.companyId || '';
-      
-      const admin = admins.find(a => a.companyId === companyId || a.id === companyId);
-      setCompanyName(admin?.companyName || currentAdmin?.companyName || 'Not specified');
-      
-      // Convert targetBand from string to number for the form
-      const targetBandNum = typeof studentData.targetBand === 'string' 
-        ? parseFloat(studentData.targetBand) 
-        : Number(studentData.targetBand) || 0;
-      
+      console.log("Student data loaded:", studentData);
+
+      const targetBandNum =
+        typeof studentData.targetBand === "string"
+          ? parseFloat(studentData.targetBand)
+          : Number(studentData.targetBand) || 0;
+
+      const examId = getExamId(studentData);
+
       setInitialValues({
-        name: studentData.name || '',
-        email: studentData.email || '',
-        phone: studentData.phone || '',
-        avatar: studentData.avatar || '',
-        country: studentData.country || '',
+        name: studentData.name || "",
+        email: studentData.email || "",
+        phone: studentData.phone || "",
+        avatar: studentData.avatar?.id || "",
+        country: studentData.country || "",
         targetBand: targetBandNum,
-        targetExam: studentData.targetExam || '',
-        currentLevel: studentData.currentLevel || '',
-        enrollmentDate: studentData.enrollmentDate 
+        targetExam: examId,
+        currentLevel: String(studentData.currentLevel || "").trim(),
+        enrollmentDate: studentData.enrollmentDate
           ? new Date(studentData.enrollmentDate).toISOString().slice(0, 16)
           : new Date().toISOString().slice(0, 16),
         isExternal: studentData.isExternal || false,
-        companyId: companyId,
       });
-      
+
       if (studentData.avatar) {
         const url = getFileUrl(studentData.avatar);
         if (url) setAvatarUrl(url);
       }
       setIsLoading(false);
     }
-  }, [studentData, getCompanyId, admins, currentAdmin]);
+  }, [studentData]);
 
   useEffect(() => {
     if (!isFetching && !studentData && id) {
       const student = getStudentById(id);
       if (student) {
-        console.log('Using student from store:', student);
-        const companyId = student.companyId || getCompanyId() || admins[0]?.companyId || '';
-        
-        const admin = admins.find(a => a.companyId === companyId || a.id === companyId);
-        setCompanyName(admin?.companyName || currentAdmin?.companyName || 'Not specified');
-        
-        const targetBandNum = typeof student.targetBand === 'string' 
-          ? parseFloat(student.targetBand) 
-          : Number(student.targetBand) || 0;
-        
+        console.log("Using student from store:", student);
+
+        const targetBandNum =
+          typeof student.targetBand === "string"
+            ? parseFloat(student.targetBand)
+            : Number(student.targetBand) || 0;
+
+        const examId = getExamId(student);
+
         setInitialValues({
-          name: student.name || '',
-          email: student.email || '',
-          phone: student.phone || '',
-          avatar: student.avatar || '',
-          country: student.country || '',
+          name: student.name || "",
+          email: student.email || "",
+          phone: student.phone || "",
+          avatar: student.avatar?.id || "",
+          country: student.country || "",
           targetBand: targetBandNum,
-          targetExam: student.targetExam || '',
-          currentLevel: student.currentLevel || '',
-          enrollmentDate: student.enrollmentDate 
+          targetExam: examId, // Use the extracted ID
+          currentLevel: student.currentLevel || "",
+          enrollmentDate: student.enrollmentDate
             ? new Date(student.enrollmentDate).toISOString().slice(0, 16)
             : new Date().toISOString().slice(0, 16),
           isExternal: student.isExternal || false,
-          companyId: companyId,
         });
         if (student.avatar) {
           const url = getFileUrl(student.avatar);
@@ -129,42 +175,46 @@ export const EditStudent: React.FC = () => {
         }
         setIsLoading(false);
       } else if (!isFetching) {
-        toast.error('Student not found');
-        navigate('/students');
+        toast.error("Student not found");
+        navigate("/students");
       }
     }
-  }, [isFetching, studentData, id, getStudentById, navigate, getCompanyId, admins, currentAdmin]);
+  }, [
+    isFetching,
+    studentData,
+    id,
+    getStudentById,
+    navigate,
+  ]);
 
   useEffect(() => {
     if (fetchError) {
-      console.error('Error fetching student:', fetchError);
+      console.error("Error fetching student:", fetchError);
       if (id) {
         const student = getStudentById(id);
         if (student) {
-          console.log('Using student from store after API error:', student);
-          const companyId = student.companyId || getCompanyId() || admins[0]?.companyId || '';
-          
-          const admin = admins.find(a => a.companyId === companyId || a.id === companyId);
-          setCompanyName(admin?.companyName || currentAdmin?.companyName || 'Not specified');
-          
-          const targetBandNum = typeof student.targetBand === 'string' 
-            ? parseFloat(student.targetBand) 
-            : Number(student.targetBand) || 0;
-          
+          console.log("Using student from store after API error:", student);
+
+          const targetBandNum =
+            typeof student.targetBand === "string"
+              ? parseFloat(student.targetBand)
+              : Number(student.targetBand) || 0;
+
+          const examId = getExamId(student);
+
           setInitialValues({
-            name: student.name || '',
-            email: student.email || '',
-            phone: student.phone || '',
-            avatar: student.avatar || '',
-            country: student.country || '',
+            name: student.name || "",
+            email: student.email || "",
+            phone: student.phone || "",
+            avatar: student.avatar?.id || "",
+            country: student.country || "",
             targetBand: targetBandNum,
-            targetExam: student.targetExam || '',
-            currentLevel: student.currentLevel || '',
-            enrollmentDate: student.enrollmentDate 
+            targetExam: examId, 
+            currentLevel: student.currentLevel || "",
+            enrollmentDate: student.enrollmentDate
               ? new Date(student.enrollmentDate).toISOString().slice(0, 16)
               : new Date().toISOString().slice(0, 16),
             isExternal: student.isExternal || false,
-            companyId: companyId,
           });
           if (student.avatar) {
             const url = getFileUrl(student.avatar);
@@ -172,64 +222,47 @@ export const EditStudent: React.FC = () => {
           }
           setIsLoading(false);
         } else {
-          toast.error('Failed to load student data');
+          toast.error("Failed to load student data");
         }
       }
     }
-  }, [fetchError, id, getStudentById, getCompanyId, admins, currentAdmin]);
+  }, [fetchError, id, getStudentById]);
 
- // src/components/students/EditStudent.tsx - Update handleSubmit
-
-const handleSubmit = async (values: StudentFormData) => {
+  const handleSubmit = async (values: StudentFormData) => {
     try {
       setIsSaving(true);
-      
-      // Ensure companyId is always set
-      const companyId = values.companyId || getCompanyId() || admins[0]?.companyId || '';
-      
-      if (!companyId) {
-        toast.error('No company ID available');
-        setIsSaving(false);
-        return;
-      }
-  
+
       const currentStudent = studentData || getStudentById(id!);
-      
-      // Ensure avatar is preserved
-      let avatarId = values.avatar;
-      if (!avatarId && currentStudent?.avatar) {
-        avatarId = currentStudent.avatar;
-      }
-      
+
+      let avatarId = values.avatar || currentStudent?.avatar?.id || null;
+
       const updateData = {
         name: values.name,
         email: values.email,
         phone: values.phone,
-        avatarid: avatarId || null,
+        avatarid: avatarId,
         country: values.country,
-        targetBand: values.targetBand, 
-        targetExam: values.targetExam,
+        targetBand: values.targetBand,
+        targetExam: values.targetExam || '',
         currentLevel: values.currentLevel,
         enrollmentDate: values.enrollmentDate,
         isExternal: values.isExternal,
-        companyId: companyId, // Ensure companyId is always included
       };
-  
-      console.log('Updating student with data:', updateData);
-      
-      updateStudentApi({ 
-        id: id!, 
-        data: updateData
+
+      console.log("Updating student with data:", updateData);
+
+      updateStudentApi({
+        id: id!,
+        data: updateData,
       });
-      
     } catch (error) {
-      console.error('Error updating student:', error);
-      toast.error('Failed to update student');
+      console.error("Error updating student:", error);
+      toast.error("Failed to update student");
       setIsSaving(false);
     }
   };
 
-  if (isLoading || isFetching) {
+  if (isLoading || isFetching || isLoadingIelts) {
     return (
       <div className="flex flex-col justify-center items-center min-h-64 gap-4">
         <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
@@ -241,8 +274,12 @@ const handleSubmit = async (values: StudentFormData) => {
   if (fetchError && !initialValues) {
     return (
       <div className="flex flex-col justify-center items-center min-h-64 gap-4 p-6">
-        <div className="text-red-500 text-lg">⚠️ Failed to load student data</div>
-        <p className="text-slate-500 text-sm">{(fetchError as any)?.message || 'Please try again'}</p>
+        <div className="text-red-500 text-lg">
+          ⚠️ Failed to load student data
+        </div>
+        <p className="text-slate-500 text-sm">
+          {(fetchError as any)?.message || "Please try again"}
+        </p>
         <div className="flex gap-3">
           <button
             onClick={() => refetch()}
@@ -251,7 +288,7 @@ const handleSubmit = async (values: StudentFormData) => {
             Retry
           </button>
           <button
-            onClick={() => navigate('/students')}
+            onClick={() => navigate("/students")}
             className="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
           >
             Go Back
@@ -265,7 +302,7 @@ const handleSubmit = async (values: StudentFormData) => {
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-4 mb-6">
         <button
-          onClick={() => navigate('/students')}
+          onClick={() => navigate("/students")}
           className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
           disabled={isSaving || isUpdating}
         >
@@ -273,7 +310,9 @@ const handleSubmit = async (values: StudentFormData) => {
         </button>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Edit Student</h1>
-          <p className="text-sm text-slate-500 mt-1">Update student information</p>
+          <p className="text-sm text-slate-500 mt-1">
+            Update student information
+          </p>
         </div>
       </div>
 
@@ -284,7 +323,7 @@ const handleSubmit = async (values: StudentFormData) => {
           initialValues={initialValues}
           isEditing={true}
           avatarUrl={avatarUrl}
-          companyName={companyName}
+          ieltsOptions={ieltsOptions}
         />
       )}
     </div>

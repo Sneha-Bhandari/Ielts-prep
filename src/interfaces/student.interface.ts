@@ -6,14 +6,29 @@ export interface Student {
     name: string;
     email: string;
     phone: string;
-    avatar: string 
+    avatar: Avatar | null;
     country: string;
     targetBand: string;
-    targetExam: string;
+    targetExam: {
+        id: string;
+        title: string;
+        ieltsType?: {
+            id: string;
+            name: string;
+        };
+    } | null;
     currentLevel: string;
     enrollmentDate: string;
     isExternal: boolean;
-    companyId: string;
+    companyId: string | null;
+  }
+  export interface Avatar {
+    id: string;
+    url: string;
+    key?: string;
+    mimeType?: string;
+    size?: number;
+    type?: string;
   }
   
   export interface StudentFilters {

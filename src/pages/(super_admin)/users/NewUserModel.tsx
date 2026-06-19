@@ -21,31 +21,32 @@ export default function NewUserModel() {
   const { addAdmin } = useAdminStore();
 
   const { data: plans = [], isLoading: plansLoading } = useAppQuery<Plan[]>({
-    url: '/plans',
+    url: '/plans/',
     queryKey: ['plans'],
   });
 
-  const { mutate: createAdmin, isPending: isLoading } = useAppMutation({
+  const { mutateAsync: createAdmin, isPending: isLoading } = useAppMutation({
     url: '/admins',
     type: 'post',
     onSuccess: (data) => {
       addAdmin(data);
-      toast.success('Company created successfully!', {
-      });
+      toast.success('Company created successfully!');
+  
       setTimeout(() => {
         navigate('/user');
       }, 2000);
     },
     onError: (error: any) => {
-      console.error('Error creating company:', error);
-      toast.error(error?.response?.data?.message || 'Failed to create company. Please try again.', {
-      });
+      toast.error(
+        error?.response?.data?.message ||
+        'Failed to create company. Please try again.'
+      );
     },
   });
 
   const handleCreateAdmin = async (values: any) => {
     const selectedPlan = plans.find(plan => plan.name === values.plan);
-    
+  
     const payload = {
       country: values.country,
       companyName: values.companyName,
@@ -55,13 +56,12 @@ export default function NewUserModel() {
       website: values.website || null,
       panNo: values.panNo,
       registrationDocument: values.registrationDocument,
-      planid: selectedPlan?.id || values.plan, 
+      planid: selectedPlan?.id || values.plan,
       paymentStatus: values.paymentStatus || 'pending',
       isActive: values.isActive ?? true,
     };
-    
-    console.log('Sending payload:', payload);
-    createAdmin({ data: payload });
+  
+    await createAdmin({ data: payload });
   };
 
   return (

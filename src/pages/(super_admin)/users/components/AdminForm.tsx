@@ -4,7 +4,7 @@ import { Loader2, Upload, X, FileText, Building } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import type { Plan } from '../../../../interfaces/admin.interface';
 import { uploadFile } from '../../../../lib/file-upload';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 interface Country {
   id: string;
@@ -93,10 +93,10 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
       
       if (fieldName === 'logo') {
         setFieldValue('companyLogo', uploadedFile.id);
-        toast.success('Logo uploaded successfully!');
+      toast.success('File uploaded successfully');
       } else {
         setFieldValue('registrationDocument', uploadedFile.id);
-        toast.success('Document uploaded successfully!');
+      toast.success('File uploaded successfully');
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -184,7 +184,7 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
         setLogoPreview('');
       }
     } catch (error) {
-      console.error('Form submission error:', error);
+      console.error(error);
     } finally {
       setSubmitting(false);
     }
@@ -198,7 +198,6 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
 
   return (
     <>
-      <Toaster position="top-right" />
       <Formik
         initialValues={initialFormValues}
         validationSchema={adminSchema}

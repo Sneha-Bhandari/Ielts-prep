@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Eye, Trash2, User, Loader2, Mail, Globe, Target, GraduationCap, Edit, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useStudentStore } from '../../../store/student.store';
@@ -6,13 +6,13 @@ import { useAppQuery, useAppMutation } from '../../../lib/react-query';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Student } from '../../../interfaces/student.interface';
 import { getFileUrl } from '../../../lib/file-upload';
-import toast from 'react-hot-toast';
+import  toast, {Toaster} from 'react-hot-toast';
 import Pagination from '../../../components/UI/Pagination'; 
 
 export const StudentManagement = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { students, setStudents, deleteStudent: deleteFromStore } = useStudentStore();
+  const { setStudents, deleteStudent: deleteFromStore } = useStudentStore();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -21,10 +21,11 @@ export const StudentManagement = () => {
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5; // Number of items per page
+  const itemsPerPage = 5;
 
-  const { data: fetchedStudents = [], isLoading } = useAppQuery<Student[]>({
-    url: "/students",
+  // Fetch students
+  const { data: fetchedStudents, isLoading } = useAppQuery<Student[]>({
+    url: "/students/",
     queryKey: ["students"],
   });
 
@@ -43,22 +44,34 @@ export const StudentManagement = () => {
     },
   });
 
-  if (fetchedStudents.length > 0 && fetchedStudents !== students) {
-    setStudents(fetchedStudents);
-  }
+  // Use fallback for students
+  const studentsData = fetchedStudents ?? [];
+  console.log(studentsData,"dsds",fetchedStudents)
 
-  const safeStudents = fetchedStudents.length > 0 ? fetchedStudents : students;
+  useEffect(() => {
+    if (fetchedStudents?.length) {
+      setStudents(fetchedStudents);
+    }
+  }, [fetchedStudents, setStudents]);
 
+  const safeStudents = studentsData;
+
+console.log(safeStudents,"here")
   const filteredStudents = safeStudents.filter((student: Student) => {
     const name = student?.name || '';
     const email = student?.email || '';
     const country = student?.country || '';
-    const targetExam = student?.targetExam || '';
+    
+    // Get the exam title from the targetExam object
+    let targetExamTitle = '';
+    if (student?.targetExam && typeof student.targetExam === 'object') {
+      targetExamTitle = student.targetExam.title || '';
+    }
     
     const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          country.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         targetExam.toLowerCase().includes(searchTerm.toLowerCase());
+                         targetExamTitle.toLowerCase().includes(searchTerm.toLowerCase());
     
     let matchesType = true;
     if (filterType === 'internal') matchesType = student.isExternal === false;
@@ -102,6 +115,18 @@ export const StudentManagement = () => {
     return null;
   };
 
+  // Helper function to get exam title from student object (only title, no type)
+  const getExamTitle = (student: Student): string => {
+    if (!student.targetExam) return 'N/A';
+    
+    // If targetExam is an object with title
+    if (typeof student.targetExam === 'object' && student.targetExam !== null) {
+      return student.targetExam.title || 'N/A';
+    }
+    
+    return 'N/A';
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-80 gap-3">
@@ -113,6 +138,7 @@ export const StudentManagement = () => {
 
   return (
     <div className="space-y-6 p-6">
+        <Toaster position="top-right"/>
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Student Management</h1>
@@ -178,6 +204,7 @@ export const StudentManagement = () => {
                 currentStudents.map((student: Student, index) => {
                   const avatarUrl = getAvatarUrl(student);
                   const serialNumber = startIndex + index + 1;
+                  const examTitle = getExamTitle(student);
                   
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors group">
@@ -220,7 +247,9 @@ export const StudentManagement = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <BookOpen className="h-4 w-4 text-slate-400" />
-                          <span className="text-sm font-medium text-slate-600">{student.targetExam || 'N/A'}</span>
+                          <span className="text-sm font-medium text-slate-600">
+                            {examTitle}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

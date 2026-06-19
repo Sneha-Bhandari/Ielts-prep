@@ -1,28 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, User, Mail, Phone, Globe, Target, GraduationCap, Calendar, Building2, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, User, Mail, Phone, Globe, Target, GraduationCap, Calendar } from 'lucide-react';
 import { useStudentStore } from '../../../../store/student.store';
-import { useAdminStore } from '../../../../store/admin.store';
-import { useAppQuery, useAppMutation } from '../../../../lib/react-query';
-import { useQueryClient } from '@tanstack/react-query';
+import { useAppQuery } from '../../../../lib/react-query';
 import { getFileUrl } from '../../../../lib/file-upload';
 import type { Student } from '../../../../interfaces/student.interface';
-import toast from 'react-hot-toast';
 
 export const StudentDetail: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const queryClient = useQueryClient();
-  const { getStudentById, deleteStudent: deleteFromStore } = useStudentStore();
-  const { admins } = useAdminStore();
+  const { getStudentById } = useStudentStore();
   const [student, setStudent] = useState<Student | null>(null);
-  const [companyName, setCompanyName] = useState<string>('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState(false);
+  const [examDisplayName, setExamDisplayName] = useState<string>('');
 
-  // Fetch student from backend
   const { 
     data: studentData, 
     isLoading: isFetching,
@@ -33,30 +25,20 @@ export const StudentDetail: React.FC = () => {
     enabled: !!id,
   });
 
-  const { mutate: deleteStudentApi } = useAppMutation({
-    url: "/students",
-    type: "delete",
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["students"] });
-      setIsDeleting(false);
-      deleteFromStore(id!);
-      toast.success('Student deleted successfully');
-      navigate('/students');
-    },
-    onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Failed to delete student');
-      setIsDeleting(false);
-    },
-  });
+  const getExamDisplayName = (student: Student): string => {
+    if (!student.targetExam) return 'N/A';
+    
+    if (typeof student.targetExam === 'object' && student.targetExam !== null) {
+      const examObj = student.targetExam;
+      return `${examObj.title} `;
+    }
+    
+    return 'N/A';
+  };
 
   useEffect(() => {
     if (studentData) {
       setStudent(studentData);
-      
-      const admin = admins.find(a => 
-        a.companyId === studentData.companyId || a.id === studentData.companyId
-      );
-      setCompanyName(admin?.companyName || 'Not specified');
       
       if (studentData.avatar) {
         const url = getFileUrl(studentData.avatar);
@@ -66,14 +48,15 @@ export const StudentDetail: React.FC = () => {
       } else {
         setAvatarUrl(null);
       }
+
+      // Set exam display name from the student object
+      const displayName = getExamDisplayName(studentData);
+      setExamDisplayName(displayName);
+      
     } else if (!isFetching && id) {
       const studentFromStore = getStudentById(id);
       if (studentFromStore) {
         setStudent(studentFromStore);
-        const admin = admins.find(a => 
-          a.companyId === studentFromStore.companyId || a.id === studentFromStore.companyId
-        );
-        setCompanyName(admin?.companyName || 'Not specified');
         
         if (studentFromStore.avatar) {
           const url = getFileUrl(studentFromStore.avatar);
@@ -83,20 +66,17 @@ export const StudentDetail: React.FC = () => {
         } else {
           setAvatarUrl(null);
         }
+        const displayName = getExamDisplayName(studentFromStore);
+        setExamDisplayName(displayName);
       }
     }
-  }, [studentData, isFetching, id, getStudentById, admins]);
-
-  const handleDelete = () => {
-    setIsDeleting(true);
-    deleteStudentApi({ id });
-  };
+  }, [studentData, isFetching, id, getStudentById]);
 
   const handleImageError = () => {
     console.log('Image failed to load, showing fallback');
     setImageError(true);
   };
-
+  
   if (isFetching) {
     return (
       <div className="flex flex-col justify-center items-center min-h-64 gap-4">
@@ -124,34 +104,16 @@ export const StudentDetail: React.FC = () => {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate('/students')}
-            className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
-            <p className="text-sm text-slate-500 mt-1">View complete student information</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate(`/students/edit/${student.id}`)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Edit className="h-4 w-4" />
-            Edit
-          </button>
-          <button
-            onClick={() => setShowDeleteModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </button>
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => navigate('/students')}
+          className="p-2 hover:bg-slate-100 rounded-xl transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-slate-600" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Student Details</h1>
+          <p className="text-sm text-slate-500 mt-1">View complete student information</p>
         </div>
       </div>
 
@@ -250,7 +212,9 @@ export const StudentDetail: React.FC = () => {
                   <GraduationCap className="h-5 w-5 text-slate-400 mt-0.5" />
                   <div>
                     <p className="text-xs text-slate-500">Target Exam</p>
-                    <p className="text-sm font-medium text-slate-900">{student.targetExam}</p>
+                    <p className="text-sm font-medium text-slate-900">
+                      {examDisplayName}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
@@ -284,58 +248,9 @@ export const StudentDetail: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Company Information */}
-            <div className="space-y-4 md:col-span-2">
-              <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2">
-                Company Information
-              </h3>
-              <div className="flex items-start gap-3">
-                <Building2 className="h-5 w-5 text-slate-400 mt-0.5" />
-                <div>
-                  <p className="text-xs text-slate-500">Company</p>
-                  <p className="text-sm font-medium text-slate-900">{companyName}</p>
-                  <p className="text-xs text-slate-400">Company ID: {student.companyId}</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
-                <Trash2 className="h-6 w-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-center text-slate-900 mb-2">Delete Student</h3>
-              <p className="text-sm text-center text-slate-500 mb-6">
-                Are you sure you want to delete this student? This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-                  disabled={isDeleting}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  {isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

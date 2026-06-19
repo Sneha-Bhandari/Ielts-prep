@@ -21,7 +21,7 @@ export const uploadFile = async (file: File): Promise<UploadedFile> => {
 
   try {
     const response = await axios.post(
-      `${baseURL}/fileupload/image`,
+      `${baseURL}/fileupload/`,
       formData,
       {
         headers: {
@@ -72,7 +72,7 @@ export const uploadMultipleFiles = async (files: File[]): Promise<UploadedFile[]
 
   try {
     const response = await axios.post(
-      `${baseURL}/fileupload/images`,
+      `${baseURL}/fileupload/`,
       formData,
       {
         headers: {
@@ -112,7 +112,7 @@ export const uploadMultipleFiles = async (files: File[]): Promise<UploadedFile[]
  */
 export const deleteFile = async (fileId: string): Promise<void> => {
   try {
-    await axios.delete(`${baseURL}/fileupload/image/${fileId}`);
+    await axios.delete(`${baseURL}/fileupload/${fileId}`);
   } catch (error) {
     console.error("Delete file error:", error);
     throw error;
@@ -139,7 +139,7 @@ export const getFileUrl = (fileData: string | { url: string } | null | undefined
       return `${baseURL}${fileData}`;
     }
     // If it's just an ID, construct URL (adjust based on your backend)
-    return `${baseURL}/fileupload/image/${fileData}`;
+    return `${baseURL}/fileupload/${fileData}`;
   }
   
   // If it's an object with url property
