@@ -141,21 +141,21 @@ console.log(safeStudents,"here")
         <Toaster position="top-right"/>
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Student Management</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="page-title">Student Management</h1>
+          <p className="page-subtitle">
             Manage all students registered under your company
           </p>
         </div>
         <button
           onClick={() => navigate('/students/add')}
-          className="flex items-center gap-2 bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand transition-colors shadow-sm cursor-pointer duration-500"
+          className="flex items-center gap-2 font-aeonik bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand transition-colors shadow-sm cursor-pointer duration-500"
         >
           <Plus className="h-4 w-4" />
           <span>Add Student</span>
         </button>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm font-aeonik">
         <div className="p-4 border-b border-slate-200">
           <div className="flex flex-col sm:flex-row gap-3 justify-between">
             <div className="relative flex-1">

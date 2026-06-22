@@ -455,12 +455,12 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
                 </div>
 
                 {/* Registration Document Upload - Small Box like Logo */}
-                <div className="col-span-2 sm:col-span-1">
+                <div className="">
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Registration Document *
                   </label>
                   {registrationDocumentPreview ? (
-                    <div className="relative w-32 h-32 rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-50 group">
+                    <div className="relative w-full h-32 rounded-xl overflow-hidden border-2 border-slate-200 bg-slate-50 group">
                       {registrationDocumentPreview.match(/\.(jpeg|jpg|png|gif|webp)$/i) ? (
                         <img
                           src={registrationDocumentPreview}
@@ -489,7 +489,7 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
                     </div>
                   ) : (
                     <div
-                      className={`relative w-32 h-32 flex flex-col items-center justify-center border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
+                      className={`relative w-full h-32 flex flex-col items-center justify-center border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
                         isDragActiveForField('document')
                           ? "border-indigo-500 bg-indigo-50"
                           : "border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/30"
@@ -518,7 +518,6 @@ export const AdminForm = ({ onSubmit, isLoading, initialValues, countries = [], 
                     onChange={(e) => handleImageUpload(e, setFieldValue, 'document')}
                     disabled={uploadingDoc}
                   />
-                  <p className="text-xs text-slate-400 mt-1">Upload certificate or license (PDF/Image)</p>
                   <ErrorMessage name="registrationDocument" component="div" className="mt-1 text-xs text-red-500" />
                 </div>
               </div>

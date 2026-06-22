@@ -1,4 +1,3 @@
-// src/App.tsx
 import "./App.css";
 import Layout from "./HOC/Layout";
 import SuperDashboard from "./pages/(super_admin)/dashboard/superDashboard";
@@ -11,6 +10,10 @@ import { AddStudent } from "./pages/(super_admin)/students/components/AddStudent
 import { StudentManagement } from "./pages/(super_admin)/students/StudentManagement";
 import { EditStudent } from "./pages/(super_admin)/students/components/EditStudent";
 import { StudentDetail } from "./pages/(super_admin)/students/components/StudentDetail";
+import { TeacherManagement } from "./pages/(super_admin)/teachers/TeacherManagement";
+import { AddTeacher } from "./pages/(super_admin)/teachers/components/AddTeacher";
+import { TeacherDetail } from "./pages/(super_admin)/teachers/components/TeacherDetail";
+import { EditTeacher } from "./pages/(super_admin)/teachers/components/EditTeacher";
 
 function App() {
   return (
@@ -31,6 +34,13 @@ function App() {
           <Route path="/students/add" element={<AddStudent />} />
           <Route path="/students/:id" element={<StudentDetail/>} />
           <Route path="/students/edit/:id" element={<EditStudent />} />
+
+          {/* Teacher Routes */}
+          <Route path="/teachers" element={<TeacherManagement />} />
+          <Route path="/teachers/add" element={<AddTeacher/>} />
+          <Route path="/teachers/:id" element={<TeacherDetail/>} />
+          <Route path="/teachers/edit/:id" element={<EditTeacher />} />
+
         </Route>
       </Routes>
     </>

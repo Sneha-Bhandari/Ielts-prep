@@ -1,85 +1,101 @@
 import { Formik, Form, Field, ErrorMessage } from 'formik';
-import { studentSchema } from '../../../../schema/student.schema';
-import { Loader2, User, Mail, Save, Upload, X, Globe, Target, GraduationCap, Calendar, Phone } from 'lucide-react';
+import { teacherSchema } from '../../../../schema/teacher.schema';
+import { Loader2, User, Mail, Save, Upload, X, Globe, Calendar, Phone, Briefcase, FileImage } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import { uploadFile, getFileUrl } from '../../../../lib/file-upload';
 import toast, { Toaster } from 'react-hot-toast';
-import type { StudentFormData } from '../../../../schema/student.schema';
+import type { TeacherFormData } from '../../../../schema/teacher.schema';
 
-interface IeltsOption {
-  id: string;
-  title: string;
-  typeName: string;
-  displayName: string;
-}
-
-interface StudentFormProps {
-  onSubmit: (values: StudentFormData) => Promise<void> | void;
+interface TeacherFormProps {
+  onSubmit: (values: TeacherFormData) => Promise<void> | void;
   isLoading: boolean;
-  initialValues?: StudentFormData;
+  initialValues?: TeacherFormData;
   isEditing?: boolean;
-  avatarUrl?: string | null;
-  companyName?: string;
-  ieltsOptions?: IeltsOption[];
+  profileUrl?: string | null;
+  proofDocumentUrl?: string | null;
 }
 
-export const StudentForm = ({ 
+export const TeacherForm = ({ 
   onSubmit, 
   isLoading, 
   initialValues,
   isEditing = false,
-  avatarUrl = null,
-  ieltsOptions = []
-}: StudentFormProps) => {
+  profileUrl = null,
+  proofDocumentUrl = null
+}: TeacherFormProps) => {
   const navigate = useNavigate();
-  const avatarInputRef = useRef<HTMLInputElement>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string>('');
-  const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [existingAvatarId, setExistingAvatarId] = useState<string>('');
+  const profileInputRef = useRef<HTMLInputElement>(null);
+  const proofInputRef = useRef<HTMLInputElement>(null);
+  
+  const [profilePreview, setProfilePreview] = useState<string>('');
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+  const [existingProfileId, setExistingProfileId] = useState<string>('');
 
-  const initialFormValues: StudentFormData = {
+  const [proofPreview, setProofPreview] = useState<string>('');
+  const [uploadingProof, setUploadingProof] = useState(false);
+  const [existingProofId, setExistingProofId] = useState<string>('');
+
+  const initialFormValues: TeacherFormData = {
     name: initialValues?.name || '',
     email: initialValues?.email || '',
     phone: initialValues?.phone || '',
-    avatar: initialValues?.avatar || '',
+    profile: initialValues?.profile || '',
     country: initialValues?.country || '',
-    targetBand: initialValues?.targetBand || 0,
-    targetExam: initialValues?.targetExam || '',
-    currentLevel: initialValues?.currentLevel || '',
+    role: initialValues?.role || 'teacher',
     enrollmentDate: initialValues?.enrollmentDate || new Date().toISOString().slice(0, 16),
-    isExternal: initialValues?.isExternal || false,
-
+    proofDocument: initialValues?.proofDocument || '',
   };
 
+  // Profile image effects
   useEffect(() => {
-    if (initialValues?.avatar) {
-      setExistingAvatarId(initialValues.avatar);
+    if (initialValues?.profile) {
+      setExistingProfileId(initialValues.profile);
     }
   }, [initialValues]);
 
   useEffect(() => {
-    if (avatarUrl) {
-      setAvatarPreview(avatarUrl);
-    } else if (initialValues?.avatar) {
-      const url = getFileUrl(initialValues.avatar);
-      if (url) setAvatarPreview(url);
+    if (profileUrl) {
+      setProfilePreview(profileUrl);
+    } else if (initialValues?.profile) {
+      const url = getFileUrl(initialValues.profile);
+      if (url) setProfilePreview(url);
     }
-  }, [avatarUrl, initialValues]);
+  }, [profileUrl, initialValues]);
+
+  // Proof document effects
+  useEffect(() => {
+    if (initialValues?.proofDocument) {
+      setExistingProofId(initialValues.proofDocument);
+    }
+  }, [initialValues]);
 
   useEffect(() => {
+    if (proofDocumentUrl) {
+      setProofPreview(proofDocumentUrl);
+    } else if (initialValues?.proofDocument) {
+      const url = getFileUrl(initialValues.proofDocument);
+      if (url) setProofPreview(url);
+    }
+  }, [proofDocumentUrl, initialValues]);
+
+  // Cleanup URLs
+  useEffect(() => {
     return () => {
-      if (avatarPreview && avatarPreview.startsWith('blob:')) {
-        URL.revokeObjectURL(avatarPreview);
+      if (profilePreview && profilePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(profilePreview);
+      }
+      if (proofPreview && proofPreview.startsWith('blob:')) {
+        URL.revokeObjectURL(proofPreview);
       }
     };
-  }, [avatarPreview]);
+  }, [profilePreview, proofPreview]);
 
-  const handleAvatarUpload = async (
+  const handleProfileUpload = async (
     file: File,
     setFieldValue: (field: string, value: any) => void
   ) => {
-    if (!file) return
+    if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
       toast.error('File must be under 5MB');
       return;
@@ -88,51 +104,106 @@ export const StudentForm = ({
     const previewUrl = URL.createObjectURL(file);
     
     try {
-      setUploadingAvatar(true);
-      setAvatarPreview(previewUrl);
+      setUploadingProfile(true);
+      setProfilePreview(previewUrl);
 
       const uploadedFile = await uploadFile(file);
-      setFieldValue('avatar', uploadedFile.id);
-      setExistingAvatarId('');
-      toast.success('Avatar uploaded successfully!');
+      setFieldValue('profile', uploadedFile.id);
+      setExistingProfileId('');
+      toast.success('Profile picture uploaded successfully!');
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload avatar. Please try again.');
-      setAvatarPreview('');
-      setFieldValue('avatar', '');
+      toast.error('Failed to upload profile picture. Please try again.');
+      setProfilePreview('');
+      setFieldValue('profile', '');
     } finally {
-      setUploadingAvatar(false);
+      setUploadingProfile(false);
     }
   };
 
-  const handleAvatarRemove = (setFieldValue: (field: string, value: any) => void) => {
-    if (avatarPreview && avatarPreview.startsWith('blob:')) {
-      URL.revokeObjectURL(avatarPreview);
+  const handleProfileRemove = (setFieldValue: (field: string, value: any) => void) => {
+    if (profilePreview && profilePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(profilePreview);
     }
-    setAvatarPreview('');
-    setFieldValue('avatar', '');
-    setExistingAvatarId('');
-    if (avatarInputRef.current) avatarInputRef.current.value = '';
-    toast.success('Avatar removed');
+    setProfilePreview('');
+    setFieldValue('profile', '');
+    setExistingProfileId('');
+    if (profileInputRef.current) profileInputRef.current.value = '';
+    toast.success('Profile picture removed');
   };
 
-  const handleSubmit = async (values: StudentFormData, { setSubmitting }: any) => {
+  const handleProofUpload = async (
+    file: File,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File must be under 10MB');
+      return;
+    }
+
+    // Check if file is an image
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    
     try {
-      let avatarId = values.avatar;
-      if (typeof avatarId === 'object' && avatarId !== null) {
-        avatarId = (avatarId as any).id;
+      setUploadingProof(true);
+      setProofPreview(previewUrl);
+
+      const uploadedFile = await uploadFile(file);
+      setFieldValue('proofDocument', uploadedFile.id);
+      setExistingProofId('');
+      toast.success('Proof document uploaded successfully!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload proof document. Please try again.');
+      setProofPreview('');
+      setFieldValue('proofDocument', '');
+    } finally {
+      setUploadingProof(false);
+    }
+  };
+
+  const handleProofRemove = (setFieldValue: (field: string, value: any) => void) => {
+    if (proofPreview && proofPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(proofPreview);
+    }
+    setProofPreview('');
+    setFieldValue('proofDocument', '');
+    setExistingProofId('');
+    if (proofInputRef.current) proofInputRef.current.value = '';
+    toast.success('Proof document removed');
+  };
+
+  const handleSubmit = async (values: TeacherFormData, { setSubmitting }: any) => {
+    try {
+      let profileId = values.profile;
+      if (typeof profileId === 'object' && profileId !== null) {
+        profileId = (profileId as any).id;
       }
-      if (!avatarId && existingAvatarId) {
-        avatarId = existingAvatarId;
+      if (!profileId && existingProfileId) {
+        profileId = existingProfileId;
       }
-      const finalValues: StudentFormData = {
+
+      let proofId = values.proofDocument;
+      if (typeof proofId === 'object' && proofId !== null) {
+        proofId = (proofId as any).id;
+      }
+      if (!proofId && existingProofId) {
+        proofId = existingProofId;
+      }
+
+      const finalValues: TeacherFormData = {
         ...values,
-        avatar: avatarId || '',
-        targetExam: values.targetExam || '',
+        profile: profileId || '',
+        proofDocument: proofId || '',
       };
-  
+
       await onSubmit(finalValues);
-  
     } catch (error: any) {
       console.error('Form submission error:', error);
       toast.error(error?.message || 'Failed to submit form. Please check all fields.');
@@ -141,60 +212,63 @@ export const StudentForm = ({
     }
   };
 
-  const levelOptions = ['Beginner', 'Elementary', 'Intermediate', 'Upper Intermediate', 'Advanced'];
+  const roleOptions = [
+    { value: 'teacher', label: 'Teacher' },
+    { value: 'counselor', label: 'Counselor' },
+  ];
 
   return (
     <Formik
       initialValues={initialFormValues}
-      validationSchema={studentSchema}
+      validationSchema={teacherSchema}
       onSubmit={handleSubmit}
       enableReinitialize
       validateOnChange={true}
       validateOnBlur={true}
     >
-      {({ setFieldValue, errors, touched, isSubmitting, isValid, values }) => {
+      {({ setFieldValue, errors, touched, isSubmitting, isValid }) => {
         return (
-            <Form className="space-y-8">
-              <Toaster position='top-right'/>
+          <Form className="space-y-8 font-aeonik">
+            <Toaster position='top-right' />
             <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
-              {/* Avatar Upload */}
+              {/* Profile Picture Upload */}
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
                   <User className="h-5 w-5 text-indigo-600" />
                   Profile Picture
                 </h3>
                 <div className="flex items-center gap-6">
-                  {avatarPreview ? (
-                    <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-slate-200 bg-slate-50 group">
+                  {profilePreview ? (
+                    <div className="relative w-32 h-32  rounded-full overflow-hidden border-2 border-slate-200 bg-slate-50 group">
                       <img
-                        src={avatarPreview}
+                        src={profilePreview}
                         className="w-full h-full object-cover"
-                        alt="Student avatar"
+                        alt="Teacher profile"
                       />
-                      {uploadingAvatar && (
+                      {uploadingProfile && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
                           <Loader2 className="h-6 w-6 text-white animate-spin" />
                         </div>
                       )}
                       <button
                         type="button"
-                        onClick={() => handleAvatarRemove(setFieldValue)}
-                        disabled={uploadingAvatar}
-                        className="absolute top-4 right-4 cursor-pointer p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 disabled:opacity-50"
+                        onClick={() => handleProfileRemove(setFieldValue)}
+                        disabled={uploadingProfile}
+                        className="absolute top-4 right-4 p-1  bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer hover:bg-red-600 disabled:opacity-50"
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-3 h-3 " />
                       </button>
                     </div>
                   ) : (
                     <div
                       className={`relative w-32 h-32 flex flex-col items-center justify-center border-2 border-dashed rounded-full cursor-pointer transition-all duration-200 ${
-                        uploadingAvatar
+                        uploadingProfile
                           ? 'border-indigo-500 bg-indigo-50'
                           : 'border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/30'
                       }`}
-                      onClick={() => !uploadingAvatar && avatarInputRef.current?.click()}
+                      onClick={() => !uploadingProfile && profileInputRef.current?.click()}
                     >
-                      {uploadingAvatar ? (
+                      {uploadingProfile ? (
                         <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
                       ) : (
                         <>
@@ -205,15 +279,15 @@ export const StudentForm = ({
                     </div>
                   )}
                   <input
-                    ref={avatarInputRef}
+                    ref={profileInputRef}
                     type="file"
                     hidden
                     accept="image/*"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) handleAvatarUpload(file, setFieldValue);
+                      if (file) handleProfileUpload(file, setFieldValue);
                     }}
-                    disabled={uploadingAvatar}
+                    disabled={uploadingProfile}
                   />
                 </div>
               </div>
@@ -237,7 +311,7 @@ export const StudentForm = ({
                         className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                           touched.name && errors.name ? 'border-red-500' : 'border-slate-300'
                         }`}
-                        placeholder="Enter student name"
+                        placeholder="Enter teacher name"
                         disabled={isLoading || isSubmitting}
                       />
                     </div>
@@ -281,16 +355,7 @@ export const StudentForm = ({
                     </div>
                     <ErrorMessage name="phone" component="div" className="mt-1 text-xs text-red-500" />
                   </div>
-                </div>
-              </div>
 
-              {/* Country & External Status */}
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-indigo-600" />
-                  Location & Status
-                </h3>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-sm font-medium text-slate-700 mb-1">
                       Country <span className="text-red-500">*</span>
@@ -309,104 +374,38 @@ export const StudentForm = ({
                     </div>
                     <ErrorMessage name="country" component="div" className="mt-1 text-xs text-red-500" />
                   </div>
-
-                  <div className="col-span-2 sm:col-span-1 flex items-end">
-                    <label className="flex items-center gap-3 cursor-pointer pb-2">
-                      <Field
-                        type="checkbox"
-                        name="isExternal"
-                        className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
-                        disabled={isLoading || isSubmitting}
-                      />
-                      <span className="text-sm text-slate-700">External Student</span>
-                      <span className="text-xs text-slate-400">(Check if student is from outside)</span>
-                    </label>
-                  </div>
                 </div>
               </div>
 
-              {/* Academic Information */}
+              {/* Role & Employment Information */}
               <div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                  <GraduationCap className="h-5 w-5 text-indigo-600" />
-                  Academic Information
+                  <Briefcase className="h-5 w-5 text-indigo-600" />
+                  Role & Employment
                 </h3>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                   <div className="col-span-2 sm:col-span-1">
                     <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Target Exam
+                      Role <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
-                      <GraduationCap className="h-5 w-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Briefcase className="h-5 w-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <Field
                         as="select"
-                        name="targetExam"
-                        value={values.targetExam || ''}
+                        name="role"
                         className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                          touched.targetExam && errors.targetExam ? 'border-red-500' : 'border-slate-300'
+                          touched.role && errors.role ? 'border-red-500' : 'border-slate-300'
                         }`}
                         disabled={isLoading || isSubmitting}
                       >
-                        <option value="">Select exam type (optional)</option>
-                        {ieltsOptions.map((option) => (
-                          <option key={option.id} value={option.id}>
-                            {option.displayName}
+                        {roleOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
                           </option>
                         ))}
                       </Field>
                     </div>
-                    <ErrorMessage name="targetExam" component="div" className="mt-1 text-xs text-red-500" />
-                    {ieltsOptions.length === 0 && (
-                      <p className="mt-1 text-xs text-amber-600">
-                        No IELTS exams available. Please add IELTS data first.
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Target Band Score <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <Target className="h-5 w-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <Field
-                        type="number"
-                        name="targetBand"
-                        step="0.5"
-                        min="0"
-                        max="9"
-                        className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                          touched.targetBand && errors.targetBand ? 'border-red-500' : 'border-slate-300'
-                        }`}
-                        placeholder="e.g., 7.5"
-                        disabled={isLoading || isSubmitting}
-                      />
-                    </div>
-                    <ErrorMessage name="targetBand" component="div" className="mt-1 text-xs text-red-500" />
-                  </div>
-
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Current Level <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <GraduationCap className="h-5 w-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                      <Field
-                        as="select"
-                        name="currentLevel"
-                        value={values.currentLevel}
-                        className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                          touched.currentLevel && errors.currentLevel ? 'border-red-500' : 'border-slate-300'
-                        }`}
-                        disabled={isLoading || isSubmitting}
-                      >
-                        <option value="">Select level</option>
-                        {levelOptions.map(level => (
-                          <option key={level} value={level}>{level}</option>
-                        ))}
-                      </Field>
-                    </div>
-                    <ErrorMessage name="currentLevel" component="div" className="mt-1 text-xs text-red-500" />
+                    <ErrorMessage name="role" component="div" className="mt-1 text-xs text-red-500" />
                   </div>
 
                   <div className="col-span-2 sm:col-span-1">
@@ -428,12 +427,75 @@ export const StudentForm = ({
                   </div>
                 </div>
               </div>
+
+              {/* Proof Document - Image Upload */}
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                  <FileImage className="h-5 w-5 text-indigo-600" />
+                  Proof Document
+                </h3>
+                <div className="flex items-start gap-6">
+                  {proofPreview ? (
+                    <div className="relative w-full h-32 rounded-lg overflow-hidden border-2 border-slate-200 bg-slate-50 group">
+                      <img
+                        src={proofPreview}
+                        className="w-full h-full object-contain"
+                        alt="Proof document"
+                      />
+                      {uploadingProof && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 text-white animate-spin" />
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleProofRemove(setFieldValue)}
+                        disabled={uploadingProof}
+                        className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 disabled:opacity-50"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className={`relative w-full h-32 flex flex-col items-center justify-center border-2 border-dashed rounded-lg cursor-pointer transition-all duration-200 ${
+                        uploadingProof
+                          ? 'border-indigo-500 bg-indigo-50'
+                          : 'border-slate-300 bg-slate-50 hover:border-indigo-400 hover:bg-indigo-50/30'
+                      }`}
+                      onClick={() => !uploadingProof && proofInputRef.current?.click()}
+                    >
+                      {uploadingProof ? (
+                        <Loader2 className="h-8 w-8 text-indigo-500 animate-spin" />
+                      ) : (
+                        <>
+                          <Upload className="h-8 w-8 text-slate-400" />
+                          <span className="text-xs text-slate-500 mt-1">Upload</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    ref={proofInputRef}
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleProofUpload(file, setFieldValue);
+                    }}
+                    disabled={uploadingProof}
+                  />
+                 
+                </div>
+                <ErrorMessage name="proofDocument" component="div" className="mt-1 text-xs text-red-500" />
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={() => navigate('/students')}
+                onClick={() => navigate('/teachers')}
                 className="px-6 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-colors"
                 disabled={isLoading || isSubmitting}
               >
@@ -441,7 +503,7 @@ export const StudentForm = ({
               </button>
               <button
                 type="submit"
-                disabled={isLoading || isSubmitting || uploadingAvatar || !isValid}
+                disabled={isLoading || isSubmitting || uploadingProfile || uploadingProof || !isValid}
                 className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {(isLoading || isSubmitting) ? (
@@ -452,7 +514,7 @@ export const StudentForm = ({
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    {isEditing ? 'Update Student' : 'Add Student'}
+                    {isEditing ? 'Update Teacher' : 'Add Teacher'}
                   </>
                 )}
               </button>
