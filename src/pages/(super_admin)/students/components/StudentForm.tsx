@@ -374,7 +374,7 @@ export const StudentForm = ({
                         name="targetBand"
                         step="0.5"
                         min="0"
-                        max="9"
+                        max="10"
                         className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                           touched.targetBand && errors.targetBand ? 'border-red-500' : 'border-slate-300'
                         }`}

@@ -28,7 +28,7 @@ export const studentSchema = yup.object().shape({
     .number()
     .required("Target band is required")
     .min(0, "Target band must be at least 0")
-    .max(9, "Target band must be at most 9"),
+    .max(10, "Target band must be at most 10"),
   
     targetExam: yup.string().nullable().optional(),
   
