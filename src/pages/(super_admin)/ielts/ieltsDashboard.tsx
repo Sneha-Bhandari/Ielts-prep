@@ -84,11 +84,11 @@ export default function IeltsDashboard() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/40">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-indigo-50/40">
         <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
 
           {/* HEADER */}
-          <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 rounded-2xl p-6 shadow-lg">
+          <div className="bg-linear-to-r from-indigo-600 to-indigo-700 rounded-2xl p-6 shadow-lg">
             <div className="flex justify-between items-center">
               <div>
                 <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full mb-3">
@@ -233,7 +233,7 @@ export default function IeltsDashboard() {
                       className="group bg-white rounded-xl overflow-hidden border hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                     >
                       {/* IMAGE */}
-                      <div className="relative h-48 bg-gradient-to-br from-indigo-100 to-purple-100">
+                      <div className="relative h-48 bg-linear-to-br from-indigo-100 to-purple-100">
                         {imageSrc ? (
                           <img
                             src={imageSrc}

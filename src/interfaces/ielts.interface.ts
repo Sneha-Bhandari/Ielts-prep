@@ -32,7 +32,7 @@ export interface IeltsCourse {
   description: string;
 
   // type: string;
-   ieltsType: {
+  ieltsType: {
     id: string;
   };
 
@@ -46,10 +46,13 @@ export interface IeltsCourse {
 }
 
 export interface CourseFormData
-  extends Omit<IeltsCourse, "id" | "sections"> {}
+  extends Omit<IeltsCourse, "id" | "sections"> { }
 
 export interface SectionFormData
-  extends Omit<Section, "id" | "lessons"> {}
+  extends Omit<Section, "id" | "lessons"> { }
 
 export interface LessonFormData
-  extends Omit<Lesson, "id"> {}
+  extends Omit<Lesson, "id"> { }
+
+
+
