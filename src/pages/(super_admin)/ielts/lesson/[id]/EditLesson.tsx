@@ -1,36 +1,23 @@
-
 import { Formik, Form, Field, ErrorMessage } from "formik";
-import * as Yup from "yup";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { X, Upload, PlayCircle, Loader2, Heading, FileText, Clock, SortAsc, AlertCircle } from "lucide-react";
+import { X, Upload, PlayCircle, Loader2, Heading, Clock, SortAsc, AlertCircle } from "lucide-react";
 import axios from "axios";
+import JoditEditor from "jodit-react";
 
 import { useAppMutation } from "../../../../../lib/react-query";
 import type { Lesson } from "../../../../../interfaces/ielts.interface";
+import { lessonSchema } from "../../../../../schema/lesson.schema";
 
 interface EditLessonProps {
   lesson: Lesson;
   onClose: () => void;
 }
 
-const schema = Yup.object({
-  title: Yup.string().min(3, "Title is too short").required("Title is required"),
-  content: Yup.string().min(10, "Provide a bit more content details").required("Content is required"),
-  duration: Yup.number()
-    .typeError("Must be a numeric value")
-    .positive("Duration must be greater than 0")
-    .required("Duration is required"),
-  order: Yup.number()
-    .typeError("Must be a numeric value")
-    .integer("Must be a whole number")
-    .min(1, "Minimum index is 1")
-    .required("Order is required"),
-});
-
 export default function EditLesson({ lesson, onClose }: EditLessonProps) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef(null);
 
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -40,10 +27,22 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
   const [videoUrl, setVideoUrl] = useState<string | null>(
     lesson.videoId?.url || null
   );
-  const [videoKey, setVideoKey] = useState<string | null>(
-    lesson.videoId?.key || null
-  );
+ 
   const [isVideoChanged, setIsVideoChanged] = useState(false);
+
+  // Jodit Configuration Option Options
+  const editorConfig = useMemo(() => ({
+    readonly: false,
+    placeholder: "Input comprehensive text instructions, assignments, or guidelines...",
+    buttons: [
+      'bold', 'italic', 'underline', 'strikethrough', '|',
+      'ul', 'ol', '|',
+      'paragraph', 'fontsize', '|',
+      'align', 'undo', 'redo', '|',
+      'eraser', 'fullsize'
+    ],
+    height: 220,
+  }), []);
 
   const { mutate: updateLesson, isPending } = useAppMutation({
     url: "/lessons",
@@ -65,10 +64,10 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
       }
 
       const formData = new FormData();
-      formData.append("video", file);
+      formData.append("images", file);
 
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/fileupload/video`,
+        `${import.meta.env.VITE_API_URL}/fileupload/`,
         formData,
         {
           headers: {
@@ -78,7 +77,6 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
       );
 
       setVideoUrl(res.data.url);
-      setVideoKey(res.data.key);
       setVideoId(res.data.id);
       setIsVideoChanged(true);
     } catch (err) {
@@ -117,12 +115,12 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
 
         <Formik
           initialValues={{
-            title: lesson.title,
-            content: lesson.content,
-            duration: lesson.duration,
-            order: lesson.order,
+            title: lesson.title || "",
+            content: lesson.content || "",
+            duration: lesson.duration || "",
+            order: lesson.order || 1,
           }}
-          validationSchema={schema}
+          validationSchema={lessonSchema}
           onSubmit={(values) => {
             const payload: any = {
               id: lesson.id,
@@ -134,7 +132,6 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
               }
             };
 
-            // Only include videoId if we have one
             if (videoId) {
               payload.data.videoId = videoId;
             }
@@ -142,13 +139,12 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
             updateLesson(payload);
           }}
         >
-          {({ errors, touched }) => (
+          {({ errors, touched, values, setFieldValue }) => (
             <Form className="divide-y divide-slate-100">
               
-              {/* SCROLLABLE SCENE BODY */}
               <div className="p-6 space-y-4 max-h-[calc(100vh-14rem)] overflow-y-auto">
                 
-                {/* TITLE */}
+                {/* LESSON TITLE */}
                 <div>
                   <label className={labelStyles}>Lesson Title</label>
                   <div className={inputContainerStyles}>
@@ -162,23 +158,22 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
                   <ErrorMessage name="title" component="p" className="text-xs font-medium text-rose-500 mt-1.5 ml-1" />
                 </div>
 
-                {/* CONTENT MATERIAL */}
+                {/* CONTENT/TRANSCRIPT RICH TEXT EDITOR */}
                 <div>
                   <label className={labelStyles}>Material / Transcript Body</label>
-                  <div className="relative mt-1.5">
-                    <FileText size={16} className="absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
-                    <Field
-                      as="textarea"
-                      name="content"
-                      rows={3}
-                      placeholder="Input comprehensive text instructions, assignments, or guidelines..."
-                      className={`w-full bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 text-sm rounded-xl pl-11 pr-4 py-2.5 outline-none focus:bg-white focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100/80 transition-all duration-200 min-h-[80px] resize-y ${errors.content && touched.content ? "border-rose-400 focus:border-rose-500 focus:ring-rose-50" : ""}`}
+                  <div className="prose max-w-none mt-1.5 Jodit-editor-custom-wrapper">
+                    <JoditEditor
+                      ref={editorRef}
+                      value={values.content}
+                      config={editorConfig}
+                      onBlur={(newContent) => setFieldValue("content", newContent)}
+                      onChange={() => {}} // Keeps input smooth
                     />
                   </div>
                   <ErrorMessage name="content" component="p" className="text-xs font-medium text-rose-500 mt-1.5 ml-1" />
                 </div>
 
-                {/* PREMIUM VIDEO ASSET UPLOAD DRAGZONE */}
+                {/* VIDEO ELEMENT STREAM */}
                 <div>
                   <label className={labelStyles}>Lecture Streaming Asset</label>
                   
@@ -214,7 +209,6 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
                       </div>
                     </button>
                   ) : (
-                    /* VIDEO COMPACT PREVIEW BLOCK */
                     <div className="mt-1.5 border border-slate-200 bg-slate-50 rounded-xl p-3 flex flex-col gap-3">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
@@ -225,7 +219,6 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
                           type="button"
                           onClick={() => {
                             setVideoUrl(null);
-                            setVideoKey(null);
                             setVideoId(null);
                             setIsVideoChanged(true);
                           }}
@@ -237,18 +230,11 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
                       <video 
                         src={videoUrl} 
                         controls 
-                        className="w-full rounded-lg bg-black shadow-inner max-h-[180px]"
+                        className="w-full rounded-lg bg-black shadow-inner max-h-[180px]" 
                       />
-                      {!isVideoChanged && lesson.videoId && (
-                        <p className="text-xs text-slate-500">
-                          Current video: {lesson.videoId.type || 'video'} • 
-                          {(lesson.videoId.size ? (lesson.videoId.size / 1024 / 1024).toFixed(2) : '0')} MB
-                        </p>
-                      )}
                     </div>
                   )}
 
-                  {/* CUSTOM ERROR WRAPPER */}
                   {uploadError && (
                     <div className="mt-2 flex items-center gap-2 text-xs font-medium text-rose-500 bg-rose-50/60 border border-rose-100 p-2.5 rounded-xl">
                       <AlertCircle size={14} className="shrink-0" />
@@ -257,7 +243,7 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
                   )}
                 </div>
 
-                {/* TWO-COLUMN GRID FOR SECONDARY DATA */}
+                {/* DURATION & POSITION */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   <div>
                     <label className={labelStyles}>Duration (Minutes)</label>
@@ -290,7 +276,7 @@ export default function EditLesson({ lesson, onClose }: EditLessonProps) {
 
               </div>
 
-              {/* ACTION BUTTON FOOTER */}
+              {/* ACTION CONTAINER */}
               <div className="px-6 py-4 bg-slate-50 flex flex-row-reverse gap-3">
                 <button
                   type="submit"

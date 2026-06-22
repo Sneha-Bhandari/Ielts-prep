@@ -1,7 +1,9 @@
+import { useMemo, useRef } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Section } from "../../../../../interfaces/ielts.interface";
 import { useAppMutation } from "../../../../../lib/react-query";
+import JoditEditor from "jodit-react";
 import { sectionSchema } from "../../../../../schema/section.schema";
 
 interface EditSectionProps {
@@ -9,12 +11,26 @@ interface EditSectionProps {
   onClose: () => void;
 }
 
-
 export default function EditSection({
   section,
   onClose,
 }: EditSectionProps) {
   const queryClient = useQueryClient();
+  const editorRef = useRef(null);
+
+  // Jodit Editor configuration options
+  const editorConfig = useMemo(() => ({
+    readonly: false,
+    placeholder: "Brief summary of what this section covers...",
+    buttons: [
+      'bold', 'italic', 'underline', 'strikethrough', '|',
+      'ul', 'ol', '|',
+      'paragraph', 'fontsize', '|',
+      'align', 'undo', 'redo', '|',
+      'eraser', 'fullsize'
+    ],
+    height: 250,
+  }), []);
 
   const { mutate: updateSection, isPending } = useAppMutation({
     url: "/sections",
@@ -51,11 +67,9 @@ export default function EditSection({
         onSubmit={(values) => {
           const payload = {
             id: section.id,
-
             title: values.title,
             description: values.description,
             orderNo: Number(values.orderNo),
-
             // IMPORTANT: backend expects string
             ielts: section.ielts?.id || section.ielts,
           };
@@ -68,10 +82,10 @@ export default function EditSection({
           });
         }}
       >
-        {({ errors, touched, isSubmitting }) => (
+        {({ errors, touched, isSubmitting, values, setFieldValue }) => (
           <Form className="space-y-5">
 
-            {/* TITLE */}
+            {/* SECTION TITLE */}
             <div className="space-y-1.5">
               <label htmlFor="title" className="text-sm font-semibold text-slate-700">
                 Section Title
@@ -93,23 +107,20 @@ export default function EditSection({
               />
             </div>
 
-            {/* DESCRIPTION */}
+            {/* DESCRIPTION WITH JODIT EDITOR */}
             <div className="space-y-1.5">
               <label htmlFor="description" className="text-sm font-semibold text-slate-700">
                 Description
               </label>
-              <Field
-                id="description"
-                as="textarea"
-                name="description"
-                rows={4}
-                placeholder="Brief summary of what this section covers..."
-                className={`w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all resize-none ${
-                  touched.description && errors.description
-                    ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                    : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
-                }`}
-              />
+              <div className="prose max-w-none JSON-editor-override">
+                <JoditEditor
+                  ref={editorRef}
+                  value={values.description}
+                  config={editorConfig}
+                  onBlur={(newContent) => setFieldValue("description", newContent)}
+                  onChange={() => {}} // Satisfies typing definitions smoothly
+                />
+              </div>
               <ErrorMessage
                 name="description"
                 component="div"
@@ -140,7 +151,7 @@ export default function EditSection({
               />
             </div>
 
-            {/* BUTTONS */}
+            {/* FORM ACTIONS */}
             <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
               <button
                 type="button"

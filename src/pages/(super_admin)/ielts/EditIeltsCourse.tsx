@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { X, Upload, BookOpen, DollarSign, Globe, Layers, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import JoditEditor from "jodit-react";
 import { useAppMutation, useAppQuery } from "../../../lib/react-query";
 import { useIELTSStore } from "../../../store/ielts.store";
 import { ieltsCourseSchema } from "../../../schema/ieltsSchema";
@@ -15,6 +16,7 @@ interface Props {
 
 export default function EditIeltsCourse({ course, onClose }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef(null);
   const [imagePreview, setImagePreview] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -25,8 +27,22 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
   
   const updateCourse = useIELTSStore((state) => state.updateCourse);
 
+  // Jodit Editor configuration options
+  const editorConfig = useMemo(() => ({
+    readonly: false,
+    placeholder: "Describe what students will learn in this course...",
+    buttons: [
+      'bold', 'italic', 'underline', 'strikethrough', '|',
+      'ul', 'ol', '|',
+      'font', 'fontsize', 'paragraph', '|',
+      'align', 'undo', 'redo', '|',
+      'hr', 'eraser', 'fullsize'
+    ],
+    height: 300,
+  }), []);
+
   const { data: ieltsTypesData, isLoading: isLoadingTypes } = useAppQuery<any[]>({
-    url: "/ielts-types",
+    url: "/ielts-types/",
     queryKey: ["ieltsTypes"],
   });
 
@@ -48,11 +64,8 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
           } : course.thumbnail,
         };
         
-        // Update the store
         updateCourse(course.id, updatedCourse);
       }
-      
-      // Close the modal
       onClose();
     },
     onError: (err: any) => {
@@ -87,7 +100,7 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
     formData.append("file", file);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/fileupload/image`, {
+      const response = await fetch(`${API_BASE_URL}/fileupload/`, {
         method: 'POST',
         body: formData,
       });
@@ -97,8 +110,6 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
       }
 
       const result = await response.json();
-      console.log("Upload response:", result);
-      
       const fileId = result.id || result.fileId || result._id;
       const fileUrl = result.url || result.secure_url || result.fileUrl;
       
@@ -141,7 +152,6 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
       setNewThumbnailId(id);
       setNewThumbnailUrl(url);
       setFieldValue("thumbnailid", id);
-      console.log("New thumbnail uploaded with ID:", id, "URL:", url);
     } catch (error: any) {
       setUploadError(error.message || "Failed to upload thumbnail");
       setImagePreview(course.thumbnail?.url || "");
@@ -215,8 +225,6 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
       isPublished: Boolean(values.isPublished),
       price: Number(values.price),
     };
-    
-    console.log("Submitting update with payload:", payload);
     
     mutate({ 
       id: course.id,
@@ -449,21 +457,20 @@ export default function EditIeltsCourse({ course, onClose }: Props) {
               </ErrorMessage>
             </div>
 
-            {/* DESCRIPTION */}
+            {/* DESCRIPTION WITH JODIT-REACT */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Description <span className="text-red-500">*</span>
               </label>
-              <Field
-                as="textarea"
-                name="description"
-                rows={4}
-                placeholder="Describe what students will learn in this course..."
-                className={`w-full px-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-all ${
-                  errors.description && touched.description ? "border-red-500" : "border-gray-300"
-                }`}
-                disabled={isUploading || isPending || isSubmitting}
-              />
+              <div className="prose max-w-none">
+                <JoditEditor
+                  ref={editorRef}
+                  value={values.description}
+                  config={editorConfig}
+                  onBlur={(newContent) => setFieldValue("description", newContent)}
+                  onChange={() => {}} // Empty handler to satisfy standard props without trigger performance lags
+                />
+              </div>
               <ErrorMessage name="description" component="div" className="text-red-500 text-xs mt-1 flex items-center gap-1">
                 {(msg) => <><AlertCircle className="w-3 h-3" /> {msg}</>}
               </ErrorMessage>

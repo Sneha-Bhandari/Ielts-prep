@@ -1,17 +1,34 @@
+import { useMemo, useRef } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAppMutation } from "../../../../../lib/react-query";
 import { useNavigate, useParams } from "react-router-dom";
+import JoditEditor from "jodit-react";
 import { sectionSchema } from "../../../../../schema/section.schema";
 
 export default function CreateSectionPage() {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+    const editorRef = useRef(null);
 
     const { courseId } = useParams<{ courseId: string }>();
 
+    // Jodit Editor configuration options
+    const editorConfig = useMemo(() => ({
+        readonly: false,
+        placeholder: "Brief summary of what this section covers...",
+        buttons: [
+            'bold', 'italic', 'underline', 'strikethrough', '|',
+            'ul', 'ol', '|',
+            'paragraph', 'fontsize', '|',
+            'align', 'undo', 'redo', '|',
+            'eraser', 'fullsize'
+        ],
+        height: 250,
+    }), []);
+
     const { mutate: createSection, isPending } = useAppMutation({
-        url: "/sections",
+        url: "/sections/",
         type: "post",
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["sections"] });
@@ -50,8 +67,6 @@ export default function CreateSectionPage() {
                         title: values.title,
                         description: values.description,
                         orderNo: Number(values.orderNo),
-
-                        // ✅ backend expects this structure
                         ielts: ieltsId
                     };
 
@@ -62,10 +77,10 @@ export default function CreateSectionPage() {
                     });
                 }}
             >
-                {({ isSubmitting, errors, touched }) => (
+                {({ isSubmitting, errors, touched, values, setFieldValue }) => (
                     <Form className="space-y-5">
 
-                        {/* TITLE */}
+                        {/* SECTION TITLE */}
                         <div className="space-y-1.5">
                             <label htmlFor="title" className="text-sm font-semibold text-slate-700">
                                 Section Title
@@ -87,23 +102,20 @@ export default function CreateSectionPage() {
                             />
                         </div>
 
-                        {/* DESCRIPTION */}
+                        {/* DESCRIPTION WITH JODIT EDITOR */}
                         <div className="space-y-1.5">
                             <label htmlFor="description" className="text-sm font-semibold text-slate-700">
                                 Description
                             </label>
-                            <Field
-                                id="description"
-                                as="textarea"
-                                name="description"
-                                rows={4}
-                                placeholder="Brief summary of what this section covers..."
-                                className={`w-full border rounded-xl px-3.5 py-2.5 text-sm bg-white placeholder-slate-400 focus:outline-none focus:ring-2 transition-all resize-none ${
-                                    touched.description && errors.description
-                                        ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100"
-                                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
-                                }`}
-                            />
+                            <div className="prose max-w-none JSON-editor-override">
+                                <JoditEditor
+                                    ref={editorRef}
+                                    value={values.description}
+                                    config={editorConfig}
+                                    onBlur={(newContent) => setFieldValue("description", newContent)}
+                                    onChange={() => {}} // Satisfies prop typing without re-rendering delays
+                                />
+                            </div>
                             <ErrorMessage
                                 name="description"
                                 component="div"
@@ -111,7 +123,7 @@ export default function CreateSectionPage() {
                             />
                         </div>
 
-                        {/* ORDER NO */}
+                        {/* DISPLAY ORDER POSITION */}
                         <div className="space-y-1.5">
                             <label htmlFor="orderNo" className="text-sm font-semibold text-slate-700">
                                 Display Order Position
@@ -134,7 +146,7 @@ export default function CreateSectionPage() {
                             />
                         </div>
 
-                        {/* ACTIONS */}
+                        {/* FORM ACTIONS */}
                         <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                             <button
                                 type="button"

@@ -10,6 +10,7 @@ import {
   Layers,
   ArrowLeft,
   Eye,
+  AlertTriangle,
 } from "lucide-react";
 
 import type { Section } from "../../../../interfaces/ielts.interface";
@@ -23,38 +24,47 @@ export default function SectionDashboard() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  // Route parameter for current IELTS Course ID
   const { courseId } = useParams<{ courseId: string }>();
 
   const [openAdd, setOpenAdd] = useState(false);
   const [editingSection, setEditingSection] = useState<Section | null>(null);
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; section: Section | null }>({
+    isOpen: false,
+    section: null,
+  });
 
-  // FETCH ALL SECTIONS
   const { data: sections = [], isLoading } = useAppQuery<Section[]>({
-    url: "/sections",
+    url: "/sections/",
     queryKey: ["sections"],
   });
 
-  // FILTER SECTIONS FOR THE CURRENT COURSE
   const filteredSections = sections.filter(
     (section) => section.ielts?.id === courseId
   );
 
-  // DELETE MUTATION
-  const { mutate: deleteSection } = useAppMutation({
+  const { mutate: deleteSection, isPending: isDeleting } = useAppMutation({
     url: "/sections",
     type: "delete",
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sections"] });
+      setDeleteModal({ isOpen: false, section: null });
     },
   });
 
-  const handleDelete = (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this section?")) return;
-    deleteSection({ id });
+  const handleDeleteClick = (section: Section) => {
+    setDeleteModal({ isOpen: true, section });
   };
 
-  // BEAUTIFUL SKELETON / LOADING STATE
+  const handleConfirmDelete = () => {
+    if (deleteModal.section) {
+      deleteSection({ id: deleteModal.section.id });
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteModal({ isOpen: false, section: null });
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col gap-3 justify-center items-center min-h-screen bg-slate-50">
@@ -71,7 +81,6 @@ export default function SectionDashboard() {
       <div className="min-h-screen bg-slate-50/50 p-6 md:p-8 text-slate-800 antialiased">
         <div className="max-w-7xl mx-auto space-y-6">
           
-          {/* TOP BACK NAVIGATION */}
           <div>
             <button
               onClick={() => navigate(-1)}
@@ -82,7 +91,6 @@ export default function SectionDashboard() {
             </button>
           </div>
 
-          {/* MAIN HEADER PANEL */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -100,7 +108,6 @@ export default function SectionDashboard() {
             </button>
           </div>
 
-          {/* STATS OVERVIEW */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
               <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -123,7 +130,6 @@ export default function SectionDashboard() {
             </div>
           </div>
 
-          {/* DYNAMIC CONTENT GRID / EMPTY STATE */}
           {filteredSections.length === 0 ? (
             <div className="bg-white py-16 px-4 text-center rounded-2xl border border-slate-100 shadow-sm max-w-md mx-auto mt-8">
               <div className="h-12 w-12 bg-slate-50 rounded-xl flex items-center justify-center mx-auto mb-4 border border-slate-100">
@@ -151,14 +157,15 @@ export default function SectionDashboard() {
                       </span>
                     </div>
 
-                    <p className="text-sm text-slate-500 mt-2 line-clamp-3 leading-relaxed">
-                      {section.description || (
+                    <p className="text-sm text-slate-500 mt-2 line-clamp-3 leading-relaxed"
+                          dangerouslySetInnerHTML={{__html: section.description}}
+                    />
+                      {/* {section.description || (
                         <span className="italic text-slate-400">No description provided.</span>
-                      )}
-                    </p>
+                      )} */}
+                    
                   </div>
 
-                  {/* BOTTOM INFO & ACTION BUTTONS */}
                   <div className="mt-5 pt-4 border-t border-slate-100">
                     <div className="flex items-center justify-between mb-3.5">
                       <span className="text-xs font-semibold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md">
@@ -167,7 +174,6 @@ export default function SectionDashboard() {
                     </div>
 
                     <div className="flex gap-2">
-                      {/* VIEW BUTTON */}
                       <button
                         onClick={() =>
                           navigate(`/ielts/course/${courseId}/section/${section.id}`)
@@ -178,7 +184,6 @@ export default function SectionDashboard() {
                         View
                       </button>
 
-                      {/* EDIT BUTTON */}
                       <button
                         onClick={() => setEditingSection(section)}
                         className="flex-1 inline-flex items-center justify-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 py-2 rounded-xl text-xs font-semibold transition-colors"
@@ -187,9 +192,8 @@ export default function SectionDashboard() {
                         Edit
                       </button>
 
-                      {/* DELETE BUTTON */}
                       <button
-                        onClick={() => handleDelete(section.id)}
+                        onClick={() => handleDeleteClick(section)}
                         className="inline-flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 rounded-xl transition-colors"
                         title="Delete section"
                       >
@@ -204,7 +208,6 @@ export default function SectionDashboard() {
         </div>
       </div>
 
-      {/* ADD SECTION MODAL WRAPPER */}
       {openAdd && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white p-6 rounded-2xl w-full max-w-2xl relative shadow-xl border border-slate-100 animate-in zoom-in-95 duration-150">
@@ -219,7 +222,6 @@ export default function SectionDashboard() {
         </div>
       )}
 
-      {/* EDIT SECTION MODAL WRAPPER */}
       {editingSection && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
           <div className="bg-white p-6 rounded-2xl w-full max-w-2xl relative shadow-xl border border-slate-100 animate-in zoom-in-95 duration-150">
@@ -233,6 +235,53 @@ export default function SectionDashboard() {
               section={editingSection}
               onClose={() => setEditingSection(null)}
             />
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 p-2 bg-red-50 rounded-full border border-red-100">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-slate-900">Delete Section</h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Are you sure you want to delete <span className="font-medium text-slate-700">"{deleteModal.section?.title}"</span>?
+                  This action cannot be undone.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6 pt-4 border-t border-slate-100">
+              <button
+                onClick={handleCancelDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl text-slate-700 font-medium hover:bg-slate-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 transition-colors duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

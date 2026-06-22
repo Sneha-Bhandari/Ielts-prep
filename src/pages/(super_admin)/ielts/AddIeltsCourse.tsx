@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { X, Upload, BookOpen, DollarSign, Globe, Layers, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import JoditEditor from "jodit-react";
 import { useAppMutation, useAppQuery } from "../../../lib/react-query";
 import { useIELTSStore } from "../../../store/ielts.store";
 import { ieltsCourseSchema } from "../../../schema/ieltsSchema";
@@ -9,20 +10,21 @@ const API_BASE_URL = (import.meta as any).env.VITE_API_URL || "http://192.168.1.
 
 export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const editorRef = useRef(null);
     const [imagePreview, setImagePreview] = useState("");
     const [dragActive, setDragActive] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);  //d
-    const [uploadError, setUploadError] = useState("");     //d
+    const [isUploading, setIsUploading] = useState(false);  
+    const [uploadError, setUploadError] = useState("");     
     
     const addCourse = useIELTSStore((state) => state.addCourse);
 
     const { data: ieltsTypesData, isLoading: isLoadingTypes } = useAppQuery<any[]>({
-        url: "/ielts-types",
+        url: "/ielts-types/",
         queryKey: ["ieltsTypes"],
     });
 
     const { mutate, isPending } = useAppMutation({
-        url: "/ielts",
+        url: "/ielts/",
         type: "post",
         onSuccess: (data) => {
             if (data) {
@@ -45,6 +47,14 @@ export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
         price: 0,
     };
 
+    // Jodit editor configurations
+    const joditConfig = useMemo(() => ({
+        readonly: false,
+        placeholder: "Describe what students will learn in this course...",
+        buttons: ["bold", "italic", "underline", "strikethrough", "|", "ul", "ol", "|", "outdent", "indent", "|", "font", "fontsize", "brush", "paragraph", "|", "table", "link", "|", "align", "undo", "redo", "|", "hr", "eraser", "fullsize"],
+        height: 250,
+    }), []);
+
     useEffect(() => {
         return () => {
             if (imagePreview && imagePreview.startsWith('blob:')) {
@@ -58,7 +68,7 @@ export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
         formData.append("images", file);
         formData.append("file", file);
 
-        const response = await fetch(`${API_BASE_URL}/fileupload/image`, {
+        const response = await fetch(`${API_BASE_URL}/fileupload/`, {
             method: 'POST',
             body: formData,
         });
@@ -190,7 +200,7 @@ export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
             onSubmit={handleSubmit}
             enableReinitialize
         >
-            {({ setFieldValue, values, errors, touched, isSubmitting, resetForm }) => (
+            {({ setFieldValue, setFieldTouched, values, errors, touched, isSubmitting, resetForm }) => (
                 <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-gray-200 overflow-hidden font-sans">
                     <div className="px-6 py-5 bg-gradient-to-r from-blue-600 to-blue-700 flex justify-between items-center">
                         <div className="text-white">
@@ -398,21 +408,23 @@ export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
                             </ErrorMessage>
                         </div>
 
-                        {/* DESCRIPTION */}
+                        {/* DESCRIPTION WITH JODIT-REACT */}
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-2">
                                 Description <span className="text-red-500">*</span>
                             </label>
-                            <Field
-                                as="textarea"
-                                name="description"
-                                rows={4}
-                                placeholder="Describe what students will learn in this course..."
-                                className={`w-full px-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-all ${
-                                    errors.description && touched.description ? "border-red-500" : "border-gray-300"
-                                }`}
-                                disabled={isUploading || isPending || isSubmitting}
-                            />
+                            <div className={errors.description && touched.description ? "border border-red-500 rounded-md overflow-hidden" : ""}>
+                                <JoditEditor
+                                    ref={editorRef}
+                                    value={values.description}
+                                    config={joditConfig}
+                                    onBlur={(newContent) => {
+                                        setFieldValue("description", newContent);
+                                        setFieldTouched("description", true);
+                                    }}
+                                    onChange={() => {}} // Done onBlur to minimize lag/re-renders
+                                />
+                            </div>
                             <ErrorMessage name="description" component="div" className="text-red-500 text-xs mt-1 flex items-center gap-1">
                                 {(msg) => <><AlertCircle className="w-3 h-3" /> {msg}</>}
                             </ErrorMessage>
@@ -462,4 +474,3 @@ export default function AddIeltsCourse({ onClose }: { onClose: () => void }) {
         </Formik>
     );
 }
-
