@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   Menu
 } from "lucide-react";
+import { IoIosPeople } from "react-icons/io";
 
 // 1. Define the interface for individual navigation items
 interface NavItem {
@@ -37,10 +38,13 @@ const SideBar = () => {
   const administrationNav: NavItem[] = [
     { title: "Courses", path: "/courses/categories", icons: <LayoutGrid className="h-5 w-5" /> },
     { title: "IELTS", path: "/ielts", icons: <GraduationCap className="h-5 w-5" /> },
+    { title: "IELTS-MOCK-QNS", path: "/mock-tests", icons: <GraduationCap className="h-5 w-5" /> },
     { title: "Teachers", path: "/teachers", icons: <GraduationCap className="h-5 w-5" /> },
     { title: "Students", path: "/students", icons: <BookOpen className="h-5 w-5" /> },
     { title: "Counsellors", path: "/counsellors", icons: <UserCheck className="h-5 w-5" /> },
     { title: "Settings", path: "/settings", icons: <Settings className="h-5 w-5" /> },
+    { title: "Student Ielts", path: "/studentIelts", icons: <IoIosPeople className="h-5 w-5" />},
+
   ];
 
   // 3. Explicitly type the props parameter here

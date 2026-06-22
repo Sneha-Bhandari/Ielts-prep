@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
+import { X, Upload, BookOpen, DollarSign, Globe, Layers, AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import JoditEditor from "jodit-react";
+import { useAppMutation, useAppQuery } from "../../../lib/react-query";
 import { useIELTSStore } from "../../../store/ielts.store";
-import type { IeltsCourse } from "../../../interfaces/ielts.interface";
 import { ieltsCourseSchema } from "../../../schema/ieltsSchema";
-import { X, Upload, BookOpen, DollarSign, Globe, Layers, AlertCircle, RefreshCw } from "lucide-react";
+import type { IeltsCourse } from "../../../interfaces/ielts.interface";
+
+const API_BASE_URL = (import.meta as any).env.VITE_API_URL || "http://192.168.1.78:3008";
 
 interface Props {
   course: IeltsCourse;
@@ -11,258 +15,506 @@ interface Props {
 }
 
 export default function EditIeltsCourse({ course, onClose }: Props) {
-  const updateCourse = useIELTSStore((state) => state.updateCourse);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorRef = useRef(null);
   const [imagePreview, setImagePreview] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [isImageChanged, setIsImageChanged] = useState(false);
+  const [newThumbnailId, setNewThumbnailId] = useState<string | null>(null);
+  const [newThumbnailUrl, setNewThumbnailUrl] = useState<string | null>(null);
+  
+  const updateCourse = useIELTSStore((state) => state.updateCourse);
 
-  useEffect(() => {
-    setImagePreview(course.thumbnail);
-  }, [course]);
+  // Jodit Editor configuration options
+  const editorConfig = useMemo(() => ({
+    readonly: false,
+    placeholder: "Describe what students will learn in this course...",
+    buttons: [
+      'bold', 'italic', 'underline', 'strikethrough', '|',
+      'ul', 'ol', '|',
+      'font', 'fontsize', 'paragraph', '|',
+      'align', 'undo', 'redo', '|',
+      'hr', 'eraser', 'fullsize'
+    ],
+    height: 300,
+  }), []);
 
-  // ✅ FIXED INITIAL VALUES (API STRUCTURE)
-  const initialValues = {
-    title: course.title,
-    description: course.description,
-    ieltsType: {
-      id: typeof course.ieltsType === "object"
-        ? course.ieltsType?.id
-        : (course as any).type || "Academic",
+  const { data: ieltsTypesData, isLoading: isLoadingTypes } = useAppQuery<any[]>({
+    url: "/ielts-types/",
+    queryKey: ["ieltsTypes"],
+  });
+
+  const { mutate, isPending } = useAppMutation({
+    url: "/ielts",
+    type: "patch",
+    onSuccess: (data) => {
+      console.log("Update response:", data);
+      
+      if (data && course.id) {
+        const updatedCourse: IeltsCourse = {
+          ...course,
+          ...data,
+          
+          thumbnail: newThumbnailUrl ? {
+            ...course.thumbnail,
+            id: data.thumbnailid || newThumbnailId || course.thumbnail?.id,
+            url: newThumbnailUrl || course.thumbnail?.url || "",
+          } : course.thumbnail,
+        };
+        
+        updateCourse(course.id, updatedCourse);
+      }
+      onClose();
     },
+    onError: (err: any) => {
+      const errorMessage = err.response?.data?.message || err.message || "Failed to update course";
+      setUploadError(Array.isArray(errorMessage) ? errorMessage.join(', ') : errorMessage);
+    },
+  });
+
+  const initialValues = {
+    title: course.title || "",
+    description: course.description || "",
+    ieltsTypeid: course.ieltsType?.id || "",
+    thumbnailid: course.thumbnail?.id || "",
     isPublished: Boolean(course.isPublished),
-    thumbnail: course.thumbnail,
-    thumbnailKey: course.thumbnailKey,
-    price:
-      typeof course.price === "string"
-        ? parseFloat(course.price)
-        : course.price,
+    price: Number(course.price) || 0,
   };
 
-  const handleImageUpload = (
+  useEffect(() => {
+    if (course.thumbnail?.url) {
+      setImagePreview(course.thumbnail.url);
+    }
+    return () => {
+      if (imagePreview && imagePreview.startsWith('blob:')) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [course]);
+
+  const uploadThumbnail = async (file: File): Promise<{id: string, url: string}> => {
+    const formData = new FormData();
+    formData.append("images", file);
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/fileupload/`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const fileId = result.id || result.fileId || result._id;
+      const fileUrl = result.url || result.secure_url || result.fileUrl;
+      
+      if (!fileId) {
+        throw new Error("No ID returned from upload server");
+      }
+      
+      return { id: fileId, url: fileUrl };
+    } catch (error) {
+      console.error("Upload error:", error);
+      throw error;
+    }
+  };
+
+  const handleFileUpload = async (
+    file: File,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("Image must be under 5MB");
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError("Please upload an image file");
+      return;
+    }
+
+    setUploadError("");
+    setIsUploading(true);
+    setIsImageChanged(true);
+
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+
+    try {
+      const { id, url } = await uploadThumbnail(file);
+      setNewThumbnailId(id);
+      setNewThumbnailUrl(url);
+      setFieldValue("thumbnailid", id);
+    } catch (error: any) {
+      setUploadError(error.message || "Failed to upload thumbnail");
+      setImagePreview(course.thumbnail?.url || "");
+      setFieldValue("thumbnailid", course.thumbnail?.id || "");
+      setIsImageChanged(false);
+      setNewThumbnailId(null);
+      setNewThumbnailUrl(null);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     setFieldValue: (field: string, value: any) => void
   ) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      alert("Image size should be less than 5MB");
-      return;
+    if (file) {
+      await handleFileUpload(file, setFieldValue);
     }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-
-      setImagePreview(base64);
-      setFieldValue("thumbnail", base64);
-      setFieldValue("thumbnailKey", file.name);
-    };
-
-    reader.readAsDataURL(file);
   };
 
-  const handleRemoveImage = (
-    setFieldValue: (field: string, value: any) => void
-  ) => {
+  const handleRemoveImage = (setFieldValue: (field: string, value: any) => void) => {
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setImagePreview("");
-    setFieldValue("thumbnail", "");
-    setFieldValue("thumbnailKey", "");
+    setFieldValue("thumbnailid", "");
+    setUploadError("");
+    setIsImageChanged(true);
+    setNewThumbnailId(null);
+    setNewThumbnailUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, setFieldValue: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      await handleFileUpload(file, setFieldValue);
+    } else if (file) {
+      setUploadError("Please upload an image file");
+    }
+  };
+
+  const handleSubmit = async (values: typeof initialValues, { resetForm, setSubmitting }: any) => {
+    if (!values.title || !values.description || !values.ieltsTypeid || !values.thumbnailid) {
+      setUploadError("All fields are required");
+      setSubmitting(false);
+      return;
+    }
+    
+    const payload = {
+      title: values.title,
+      description: values.description,
+      ieltsTypeid: values.ieltsTypeid,
+      thumbnailid: values.thumbnailid,
+      isPublished: Boolean(values.isPublished),
+      price: Number(values.price),
+    };
+    
+    mutate({ 
+      id: course.id,
+      data: payload 
+    });
   };
 
   return (
     <Formik
-      enableReinitialize
       initialValues={initialValues}
       validationSchema={ieltsCourseSchema}
-      onSubmit={(values) => {
-        // ✅ FIXED PAYLOAD FOR BACKEND
-        const updatedCourse: IeltsCourse = {
-          ...course,
-          title: values.title,
-          description: values.description,
-          ieltsType: values.ieltsType,
-          isPublished: Boolean(values.isPublished),
-          thumbnail: values.thumbnail,
-          thumbnailKey: values.thumbnailKey,
-          price: values.price,
-        };
-
-        updateCourse(course.id!, updatedCourse);
-        onClose();
-      }}
+      onSubmit={handleSubmit}
+      enableReinitialize
     >
-      {({ setFieldValue, isSubmitting }) => (
-        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full border border-slate-100 overflow-hidden font-sans">
-
-          {/* HEADER (UNCHANGED UI) */}
-          <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                <RefreshCw className="w-5 h-5 text-blue-600" />
-                Modify Course Parameters
+      {({ setFieldValue, values, errors, touched, isSubmitting, resetForm }) => (
+        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-gray-200 overflow-hidden font-sans">
+          <div className="px-6 py-5 bg-gradient-to-r from-indigo-600 to-indigo-700 flex justify-between items-center">
+            <div className="text-white">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <BookOpen className="w-5 h-5" />
+                Edit Course
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Updating: <span className="font-semibold text-slate-700">
-                  {course.title || "Untitled Course"}
-                </span>
+              <p className="text-indigo-100 text-sm mt-1">
+                Update course details
               </p>
             </div>
-
             <button
               onClick={onClose}
-              className="text-slate-400 hover:text-slate-600 bg-white p-2 rounded-xl border border-slate-200 transition-colors shadow-sm"
+              className="text-white/80 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-xl transition-all duration-200"
+              disabled={isUploading || isPending || isSubmitting}
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* FORM */}
           <Form className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
+            {uploadError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <strong>Error:</strong> {uploadError}
+                  </div>
+                </div>
+              </div>
+            )}
 
-            {/* IMAGE SECTION (UNCHANGED UI) */}
+            {/* IMAGE SECTION */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-2.5">
-                Course Billboard Image
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Course Thumbnail <span className="text-red-500">*</span>
               </label>
 
-              {imagePreview && (
-                <div className="relative w-full h-48 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-inner group">
-                  <img src={imagePreview} className="w-full h-full object-cover" />
+              {imagePreview ? (
+                <div className="relative w-full h-48 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-50 group">
+                  <img
+                    src={imagePreview}
+                    className="w-full h-full object-cover"
+                    alt="Course thumbnail"
+                  />
+                  {(isUploading || isPending || isSubmitting) && (
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(setFieldValue)}
-                    className="absolute top-3 right-3 p-2 bg-red-600 text-white rounded-xl"
+                    className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600 disabled:opacity-50"
+                    disabled={isUploading || isPending || isSubmitting}
                   >
                     <X className="w-4 h-4" />
                   </button>
+                  {!isImageChanged && !isUploading && (
+                    <div className="absolute bottom-3 left-3 bg-green-500 text-white text-xs px-3 py-1.5 rounded-lg">
+                      Current image
+                    </div>
+                  )}
+                  {isImageChanged && !isUploading && imagePreview && newThumbnailId && (
+                    <div className="absolute bottom-3 left-3 bg-blue-500 text-white text-xs px-3 py-1.5 rounded-lg">
+                      New image uploaded ✓
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className={`relative flex flex-col items-center justify-center gap-3 w-full px-4 py-8 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-200 ${
+                    dragActive
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-300 bg-gray-50 hover:border-blue-400 hover:bg-blue-50/30"
+                  } ${isUploading ? 'opacity-50 cursor-wait' : ''}`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={(e) => handleDrop(e, setFieldValue)}
+                  onClick={() => !isUploading && fileInputRef.current?.click()}
+                >
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                      <p className="text-sm text-gray-600">Uploading...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="p-3 bg-blue-100 rounded-full">
+                        <Upload className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-medium text-gray-700">
+                          Click to upload or drag and drop
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 5MB
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
                 hidden
+                accept="image/*"
                 onChange={(e) => handleImageUpload(e, setFieldValue)}
+                disabled={isUploading || isPending || isSubmitting}
               />
-
-              <label
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center gap-2 w-full px-4 py-6 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer"
-              >
-                <Upload className="w-5 h-5 text-slate-400" />
-                <span className="text-sm font-semibold text-blue-600">
-                  {imagePreview ? "Replace image" : "Upload thumbnail"}
-                </span>
-              </label>
+              
+              {errors.thumbnailid && touched.thumbnailid && !uploadError && (
+                <div className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> 
+                  {errors.thumbnailid}
+                </div>
+              )}
             </div>
 
             {/* TITLE */}
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400 mb-2 block">
-                Course Core Title *
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Course Title <span className="text-red-500">*</span>
               </label>
-
               <div className="relative">
-                <BookOpen className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+                <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Field
                   name="title"
-                  className="w-full pl-11 p-3 border rounded-xl"
+                  placeholder="e.g., IELTS Academic Masterclass"
+                  className={`w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
+                    errors.title && touched.title ? "border-red-500" : "border-gray-300"
+                  }`}
+                  disabled={isUploading || isPending || isSubmitting}
                 />
               </div>
-
-              <ErrorMessage name="title" component="div" className="text-red-500 text-xs" />
+              <ErrorMessage name="title" component="div" className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                {(msg) => <><AlertCircle className="w-3 h-3" /> {msg}</>}
+              </ErrorMessage>
             </div>
 
-            {/* IELTS TYPE FIXED */}
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-400 mb-2 block">
-                Module Stream Category
-              </label>
-
-              <div className="relative">
-                <Layers className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
-                <Field
-                  name="ieltsType.id"
-                  as="select"
-                  className="w-full pl-11 p-3 border rounded-xl"
-                >
-                  <option value="Academic">Academic</option>
-                  <option value="GT">GT</option>
-                  <option value="UKVI">UKVI</option>
-                </Field>
+            {/* TWO COLUMN LAYOUT */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* IELTS TYPE */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Course Type <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Layers className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Field
+                    as="select"
+                    name="ieltsTypeid"
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none cursor-pointer bg-white"
+                    disabled={isUploading || isPending || isLoadingTypes || isSubmitting}
+                  >
+                    <option value="" disabled>
+                      {isLoadingTypes ? "Loading types..." : "Select IELTS Type"}
+                    </option>
+                    {ieltsTypesData?.map((type: any) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </Field>
+                </div>
+                <ErrorMessage name="ieltsTypeid" component="div" className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                  {(msg) => <><AlertCircle className="w-3 h-3" /> {msg}</>}
+                </ErrorMessage>
               </div>
-            </div>
 
-            {/* STATUS FIXED BOOLEAN */}
-            <div>
-              <label className="text-xs font-bold uppercase text-slate-400 mb-2 block">
-                Deployment Status
-              </label>
-
-              <div className="relative">
-                <Globe className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
-                <Field
-                  as="select"
-                  name="isPublished"
-                  className="w-full pl-11 p-3 border rounded-xl"
-                  onChange={(e: any) =>
-                    setFieldValue("isPublished", e.target.value === "true")
-                  }
-                >
-                  <option value="true">Live / Published</option>
-                  <option value="false">Internal Draft</option>
-                </Field>
+              {/* STATUS */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Status
+                </label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Field
+                    as="select"
+                    name="isPublished"
+                    className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none cursor-pointer bg-white"
+                    disabled={isUploading || isPending || isSubmitting}
+                  >
+                    <option value="false">📝 Draft</option>
+                    <option value="true">🚀 Published</option>
+                  </Field>
+                </div>
               </div>
             </div>
 
             {/* PRICE */}
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400 mb-2 block">
-                Tuition Rate
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Price <span className="text-red-500">*</span>
               </label>
-
               <div className="relative">
-                <DollarSign className="absolute left-4 top-3.5 w-4 h-4 text-slate-400" />
+                <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Field
                   name="price"
                   type="number"
-                  className="w-full pl-11 p-3 border rounded-xl"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  className={`w-full pl-10 pr-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all ${
+                    errors.price && touched.price ? "border-red-500" : "border-gray-300"
+                  }`}
+                  disabled={isUploading || isPending || isSubmitting}
                 />
               </div>
+              <ErrorMessage name="price" component="div" className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                {(msg) => <><AlertCircle className="w-3 h-3" /> {msg}</>}
+              </ErrorMessage>
             </div>
 
-            {/* DESCRIPTION */}
+            {/* DESCRIPTION WITH JODIT-REACT */}
             <div>
-              <label className="text-xs font-bold uppercase text-slate-400 mb-2 block">
-                Course Overview Summary
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Description <span className="text-red-500">*</span>
               </label>
-
-              <Field
-                as="textarea"
-                name="description"
-                rows={4}
-                className="w-full p-3 border rounded-xl"
-              />
+              <div className="prose max-w-none">
+                <JoditEditor
+                  ref={editorRef}
+                  value={values.description}
+                  config={editorConfig}
+                  onBlur={(newContent) => setFieldValue("description", newContent)}
+                  onChange={() => {}} // Empty handler to satisfy standard props without trigger performance lags
+                />
+              </div>
+              <ErrorMessage name="description" component="div" className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                {(msg) => <><AlertCircle className="w-3 h-3" /> {msg}</>}
+              </ErrorMessage>
             </div>
 
             {/* ACTIONS */}
-            <div className="flex justify-end gap-3 pt-4 border-t">
+            <div className="flex gap-3 pt-4 border-t border-gray-200">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-5 py-2 border rounded-xl"
+                onClick={() => {
+                  resetForm();
+                  setImagePreview(course.thumbnail?.url || "");
+                  setUploadError("");
+                  setIsImageChanged(false);
+                  setNewThumbnailId(null);
+                  setNewThumbnailUrl(null);
+                  onClose();
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors duration-200"
+                disabled={isUploading || isPending || isSubmitting}
               >
                 Cancel
               </button>
-
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-xl"
+                disabled={isUploading || isPending || isSubmitting || !values.thumbnailid || !values.ieltsTypeid}
+                className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed transition-colors duration-200 flex items-center justify-center gap-2"
               >
-                {isSubmitting ? "Saving..." : "Commit Changes"}
+                {(isPending || isSubmitting) ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Update Course
+                  </>
+                )}
               </button>
             </div>
           </Form>

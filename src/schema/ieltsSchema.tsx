@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 export const ieltsCourseSchema = yup.object().shape({
+  
   title: yup
     .string()
     .required("Title is required")
@@ -11,19 +12,18 @@ export const ieltsCourseSchema = yup.object().shape({
     .required("Description is required")
     .max(5000, "Description must be less than 5000 characters"),
 
-  ieltsType: yup.object().shape({
-    id: yup
-      .string()
-      .required("IELTS type is required"),
-  }),
+  // ieltsTypeid: yup.object().shape({
+  //   id: yup
+  //     .string()
+  //     .required("IELTS type is required"),
+  // }),
+ieltsTypeid: yup.string().required("ielts type id is required"),
 
-  thumbnail: yup
+  thumbnailid: yup
     .string()
     .required("Thumbnail is required"),
 
-  thumbnailKey: yup
-    .string()
-    .required("Thumbnail key is required"),
+ 
 
   isPublished: yup
     .boolean()
@@ -34,7 +34,7 @@ export const ieltsCourseSchema = yup.object().shape({
     .transform((value, originalValue) => {
       // handles "0.00" string from API
       return typeof originalValue === "string"
-        ? parseFloat(originalValue)
+        ? parseFloat(originalValue) 
         : value;
     })
     .min(0, "Price cannot be negative")

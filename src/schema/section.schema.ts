@@ -1,12 +1,3 @@
-// import * as yup from "yup";
-
-// export const sectionSchema = yup.object({
-//   name: yup
-//     .string()
-//     .required("Section name is required"),
-//   description: yup.string().required("section description is required")
-// });
-
 import * as yup from "yup";
 
 export const sectionSchema = yup.object().shape({
@@ -23,10 +14,7 @@ export const sectionSchema = yup.object().shape({
     .min(0, "Order number cannot be negative")
     .required("Order number is required"),
   
-  ielts: yup.string()
-    .nullable()
-    .notRequired()
-    .transform((value) => value === "" ? null : value),
+
 });
 
 export type SectionFormData = yup.InferType<typeof sectionSchema>;

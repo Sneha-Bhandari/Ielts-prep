@@ -42,9 +42,7 @@ export const useAppMutation = ({
   });
 };
 
-// -------------------------
-// 🔥 QUERY HOOK
-// -------------------------
+
 interface AppQueryProps<T = any> {
   url: string;
   queryKey: string[];
@@ -71,3 +69,4 @@ export const useAppQuery = <T>({
     ...options,
   });
 };
+
