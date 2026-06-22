@@ -16,10 +16,19 @@ import CreateMockTest from "./pages/(super_admin)/mock-tests/CreateMockTest";
 import MockTestDashboard from "./pages/(super_admin)/mock-tests/MockTestDashboard";
 import NewUserModel from "./pages/(super_admin)/users/NewUserModel";
 import UserManagement from "./pages/(super_admin)/users/UserManagement";
+import UserDetail from "./pages/(super_admin)/users/UserDetail";
 import Login from "./pages/Login";
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { Route, Routes } from "react-router-dom";
+import { AddStudent } from "./pages/(super_admin)/students/components/AddStudent";
+import { StudentManagement } from "./pages/(super_admin)/students/StudentManagement";
+import { EditStudent } from "./pages/(super_admin)/students/components/EditStudent";
+import { StudentDetail } from "./pages/(super_admin)/students/components/StudentDetail";
+import { TeacherManagement } from "./pages/(super_admin)/teachers/TeacherManagement";
+import { AddTeacher } from "./pages/(super_admin)/teachers/components/AddTeacher";
+import { TeacherDetail } from "./pages/(super_admin)/teachers/components/TeacherDetail";
+import { EditTeacher } from "./pages/(super_admin)/teachers/components/EditTeacher";
 import AddCourseSection from './pages/(super_admin)/courses/addCourseSection'
 import AddLesson from "./pages/(super_admin)/courses/AddLesson";
 
@@ -40,17 +49,25 @@ function App() {
 
           <Route path="/" element={<SuperDashboard />} />
 
-          {/* Home */}
+          {/* User/Company Routes */}
 
-          <Route path="/" element={<SuperDashboard />} />
-
-
-
-          {/* User Routes */}
 
           <Route path="/user" element={<UserManagement />} />
 
           <Route path="/user/new" element={<NewUserModel />} />
+          <Route path="/user/:id" element={<UserDetail />} />
+          
+          {/* Student Routes */}
+          <Route path="/students" element={<StudentManagement />} />
+          <Route path="/students/add" element={<AddStudent />} />
+          <Route path="/students/:id" element={<StudentDetail/>} />
+          <Route path="/students/edit/:id" element={<EditStudent />} />
+
+          {/* Teacher Routes */}
+          <Route path="/teachers" element={<TeacherManagement />} />
+          <Route path="/teachers/add" element={<AddTeacher/>} />
+          <Route path="/teachers/:id" element={<TeacherDetail/>} />
+          <Route path="/teachers/edit/:id" element={<EditTeacher />} />
 
 
 

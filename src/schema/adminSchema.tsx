@@ -1,39 +1,88 @@
-import * as Yup from "yup";
-import type { AdminFormValues } from "../interfaces/admin";
+// src/schema/admin.schema.ts
+import * as yup from "yup";
 
-export const adminSchema: Yup.Schema<AdminFormValues> = Yup.object({
-  name: Yup.string()
-    .required("Name is required")
-    .min(2, "Name must be at least 2 characters")
-    .max(50, "Name must be less than 50 characters"),
+// Admin Schema (has company fields)
+export const adminSchema = yup.object().shape({
+  country: yup
+    .string()
+    .required("Country is required"),
   
-  email: Yup.string()
-    .email("Invalid email format")
+  companyName: yup
+    .string()
+    .required("Company name is required")
+    .min(2, "Company name must be at least 2 characters"),
+  
+  companyAddress: yup
+    .string()
+    .required("Company address is required"),
+  
+  email: yup
+    .string()
+    .email("Invalid email address")
     .required("Email is required"),
   
-  phone: Yup.string()
-    .matches(/^[0-9]{10}$/, "Phone number must be 10 digits")
-    .required("Phone number is required"),
+  companyLogo: yup
+    .string()
+    .required("Company logo is required"),
   
-  country: Yup.string()
-    .required("Country is required")
-    .min(2, "Country must be at least 2 characters"),
   
-  companyId: Yup.string()
-    .required("Please select a company"),
+  website: yup
+    .string()
+    .url("Must be a valid URL")
+    .nullable(),
   
-  password: Yup.string()
-    .min(8, "Password must be at least 8 characters")
-    .matches(/[A-Z]/, "Password must contain at least one uppercase letter")
-    .matches(/[a-z]/, "Password must contain at least one lowercase letter")
-    .matches(/[0-9]/, "Password must contain at least one number")
-    .required("Password is required"),
+  panNo: yup
+    .string()
+    .required("PAN number is required"),
   
-  confirmPassword: Yup.string()
-    .oneOf([Yup.ref('password')], "Passwords must match")
-    .required("Please confirm your password"),
+  registrationDocument: yup
+    .string()
+    .required("Registration document is required"),
   
-  role: Yup.string()
-    .oneOf(['admin', 'super_admin'], "Invalid role")
-    .default('admin'),
+  
+  plan: yup
+    .string()
+    .required("Plan is required"),
+  
+  paymentStatus: yup
+    .string()
+    .oneOf(["pending", "completed", "failed"], "Invalid payment status")
+    .default("pending"),
+  
+  isActive: yup
+    .boolean()
+    .default(true),
 });
+
+// Company Representative Schema (has admin fields)
+export const companyRepresentativeSchema = yup.object().shape({
+  admin: yup
+    .string()
+    .required("Admin name is required"),
+  
+  name: yup
+    .string()
+    .required("Name is required"),
+  
+  contact: yup
+    .string()
+    .required("Contact is required"),
+  
+  designation: yup
+    .string()
+    .required("Designation is required"),
+  
+  email: yup
+    .string()
+    .email("Invalid email address")
+    .required("Email is required"),
+  
+    proofDocumentId: yup
+    .string()
+    .required("Proof document is required"),
+  
+  
+});
+
+export type AdminFormData = yup.InferType<typeof adminSchema>;
+export type CompanyRepresentativeFormData = yup.InferType<typeof companyRepresentativeSchema>;

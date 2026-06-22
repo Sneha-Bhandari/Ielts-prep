@@ -1,72 +1,79 @@
 import { useMutation, useQuery, type UseQueryResult } from "@tanstack/react-query";
-import axios from "axios";
+// import axios from "axios";
+import api from '../api/api'
 
+// ✅ Base URL from env (Vite)
+// const baseURL = import.meta.env.VITE_API_URL;
 
-const baseURL = import.meta.env.VITE_API_URL;
-
-
+// -------------------------
+// 🔥 MUTATION HOOK
+// -------------------------
 interface AppMutationProps {
-  url: string;
-  type: "post" | "patch" | "delete" | "put";
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
+url: string;
+type: "post" | "patch" | "delete" | "put";
+onSuccess?: (data: any) => void;
+onError?: (error: any) => void;
 }
 
 export const useAppMutation = ({
-  type,
-  onSuccess,
-  onError,
-  url,
+type,
+onSuccess,
+onError,
+url,
 }: AppMutationProps) => {
-  return useMutation({
+return useMutation({
     mutationFn: async ({ data, id }: { data?: any; id?: string }) => {
-      const formattedUrl = id ? `${url}/${id}` : url;
+     const formattedUrl = id ? `${url}/${id}` : url;
 
-      const response = await axios.request({
-        baseURL,
+     const response = await api.request({
+        // baseURL,
         url: formattedUrl,
         method: type,
         data,
-      });
+     });
 
-      return response.data;
+     return response.data;
     },
 
     onSuccess: (data) => {
-      if (onSuccess) onSuccess(data);
+     if (onSuccess) onSuccess(data);
     },
 
     onError: (error) => {
-      if (onError) onError(error);
+     if (onError) onError(error);
     },
-  });
+});
 };
 
-
+// -------------------------
+// 🔥 QUERY HOOK
+// -------------------------
 interface AppQueryProps<T = any> {
-  url: string;
-  queryKey: string[];
-  enabled?: boolean;
-  options?: any;
+url: string;
+queryKey: string[];
+enabled?: boolean;
+options?: any;
+params?: Record<string, any>;
 }
 
 export const useAppQuery = <T>({
-  url,
-  queryKey,
-  enabled = true,
-  options,
+url,
+queryKey,
+enabled = true,
+params,
+options,
 }: AppQueryProps<T>): UseQueryResult<T> => {
-  return useQuery<T>({
+return useQuery<T>({
     queryKey,
     enabled,
     queryFn: async () => {
-      const response = await axios.get<T>(url, {
-        baseURL,
-      });
-
-      return response.data;
+     const response = await api.get<T>(url, {
+        // baseURL,
+        params,
+     });
+     console.log("RAW RESPONSE:", response.data);
+     return response.data;
     },
     ...options,
-  });
+});
 };
-
